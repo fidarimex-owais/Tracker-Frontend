@@ -7,6 +7,7 @@ import {
 } from '../services/recordService';
 
 const BRAND_OPTIONS = ['Hi Banana', 'Joker', 'Banana Man'];
+const VENDOR_OPTIONS = ['Yogesh Korhale', 'Sachin Markad', 'Tannaji Kashid'];
 const WEIGHT_OPTIONS = [13.5, 14];
 const HAND_CATEGORIES = [4, 5, 6, 8];
 
@@ -50,7 +51,9 @@ export default function QRCodeGenerator() {
   const validateClientSide = () => {
     const errors = {};
     if (!form.brandName) errors.brandName = 'Brand name is required';
-    if (!form.vendorName.trim()) errors.vendorName = 'Vendor name is required';
+    if (!VENDOR_OPTIONS.includes(form.vendorName)) {
+      errors.vendorName = 'Select a valid vendor name';
+    }
     if (!form.farmerName.trim()) errors.farmerName = 'Farmer name is required';
     if (!form.supervisor.trim()) errors.supervisor = 'Supervisor is required';
     if (form.lineNumber === '' || Number(form.lineNumber) <= 0) {
@@ -96,7 +99,7 @@ export default function QRCodeGenerator() {
 
     return {
       brandName: form.brandName,
-      vendorName: form.vendorName.trim(),
+      vendorName: form.vendorName,
       farmerName: form.farmerName.trim(),
       supervisor: form.supervisor.trim(),
       lineNumber: Number(form.lineNumber),
@@ -298,14 +301,19 @@ export default function QRCodeGenerator() {
           </Field>
 
           <Field label="Vendor Name" required error={fieldErrors.vendorName}>
-            <input
-              type="text"
+            <select
               name="vendorName"
               value={form.vendorName}
               onChange={handleChange}
-              placeholder="Enter vendor name"
-              className={inputClass(fieldErrors.vendorName)}
-            />
+              className={selectClass(fieldErrors.vendorName)}
+            >
+              <option value="">Select vendor name</option>
+              {VENDOR_OPTIONS.map((vendor) => (
+                <option key={vendor} value={vendor}>
+                  {vendor}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Farmer Name" required error={fieldErrors.farmerName}>

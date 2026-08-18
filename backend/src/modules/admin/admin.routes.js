@@ -3,10 +3,43 @@ const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
 const authorize = require('../../middleware/role.middleware');
 const controller = require('./admin.controller');
+const {
+  validateCreateId,
+} = require('./admin.validation');
 
 const router = express.Router();
-router.use(authMiddleware, authorize('admin'));
-router.get('/users', asyncHandler(controller.listUsers));
-router.patch('/users/:id/role', asyncHandler(controller.updateRole));
-router.patch('/users/:id/status', asyncHandler(controller.updateStatus));
+
+router.use(
+  authMiddleware,
+  authorize('admin')
+);
+
+router.post(
+  '/users',
+  validateCreateId,
+  asyncHandler(controller.createUser)
+);
+
+router.get(
+  '/active-ids',
+  asyncHandler(controller.listActiveIds)
+);
+
+// Existing user-management endpoints are kept
+// for backward compatibility.
+router.get(
+  '/users',
+  asyncHandler(controller.listUsers)
+);
+
+router.patch(
+  '/users/:id/role',
+  asyncHandler(controller.updateRole)
+);
+
+router.patch(
+  '/users/:id/status',
+  asyncHandler(controller.updateStatus)
+);
+
 module.exports = router;

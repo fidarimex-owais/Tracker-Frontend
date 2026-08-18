@@ -1,17 +1,93 @@
+const bcrypt = require('bcryptjs');
+
 const {
   ALL_ROLES,
+  getUserModel,
+  findUserByEmail,
   findUserById,
   listUsersByRoles,
+  listAdminCreatedActiveUsers,
 } = require('../auth/auth.model');
 
 const {
   sanitizeUser,
 } = require('../auth/auth.service');
 
+const SALT_ROUNDS = 12;
+
 const SUBADMIN_MANAGEABLE_ROLES = [
   'vendor',
   'supervisor',
 ];
+
+const ADMIN_CREATABLE_ROLES = [
+  'vendor',
+  'subadmin',
+  'supervisor',
+];
+
+const sanitizeAdminCreatedUser = (user) => ({
+  id: user._id.toString(),
+  userName: user.userName || '',
+  companyName: user.companyName || '',
+  mobileNumber: user.mobileNumber || '',
+  email: user.email,
+  role: user.role,
+  isActive: user.isActive,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
+
+const createUser = async ({
+  companyName,
+  userName,
+  mobileNumber,
+  email,
+  role,
+  password,
+}) => {
+  if (!ADMIN_CREATABLE_ROLES.includes(role)) {
+    throw createHttpError(
+      400,
+      'Admin can create only Vendor, Sub-Admin, or Supervisor IDs'
+    );
+  }
+
+  const existing = await findUserByEmail(email);
+
+  if (existing) {
+    throw createHttpError(
+      409,
+      'An account with this email already exists'
+    );
+  }
+
+  const User = getUserModel();
+
+  const passwordHash = await bcrypt.hash(
+    password,
+    SALT_ROUNDS
+  );
+
+  const user = await User.create({
+    companyName,
+    userName,
+    mobileNumber,
+    email,
+    role,
+    passwordHash,
+    isActive: true,
+    createdByAdmin: true,
+  });
+
+  return sanitizeAdminCreatedUser(user);
+};
+
+const listActiveIds = async () => {
+  const users = await listAdminCreatedActiveUsers();
+
+  return users.map(sanitizeAdminCreatedUser);
+};
 
 const listUsers = async (actor) => {
   const roles =
@@ -163,6 +239,8 @@ const createHttpError = (
 };
 
 module.exports = {
+  createUser,
+  listActiveIds,
   listUsers,
   updateRole,
   updateStatus,

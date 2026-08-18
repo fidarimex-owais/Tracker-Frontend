@@ -18,6 +18,25 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
 
+    userName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    companyName: {
+      type: String,
+      enum: ['', 'Rajmata', 'Korhale', 'Jaywant'],
+      default: '',
+      index: true,
+    },
+
+    mobileNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     role: {
       type: String,
       enum: ['admin', 'subadmin', 'vendor', 'supervisor'],
@@ -29,6 +48,12 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
+    },
+
+    createdByAdmin: {
+      type: Boolean,
+      default: false,
       index: true,
     },
   },
@@ -132,6 +157,22 @@ const listUsersByRoles = async (
     .lean();
 };
 
+const listAdminCreatedActiveUsers = async () => {
+  const User = getUserModel();
+
+  return User.find({
+    createdByAdmin: true,
+    isActive: true,
+    role: {
+      $in: ['vendor', 'subadmin', 'supervisor'],
+    },
+  })
+    .sort({
+      createdAt: -1,
+    })
+    .lean();
+};
+
 module.exports = {
   ALL_ROLES,
   getUserModel,
@@ -139,4 +180,5 @@ module.exports = {
   findUserByEmail,
   findUserById,
   listUsersByRoles,
+  listAdminCreatedActiveUsers,
 };
