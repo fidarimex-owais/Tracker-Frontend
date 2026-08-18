@@ -1,12 +1,16 @@
+import { useEffect, useState } from 'react';
 import {
   NavLink,
   Outlet,
   useNavigate,
 } from 'react-router-dom';
 
+import { useAuth } from '../auth/useAuth';
+
 import {
-  useAuth,
-} from '../auth/useAuth';
+  SIGNUP_REQUESTS_CHANGED_EVENT,
+  getSignupRequestCount,
+} from '../services/adminService';
 
 const links = {
   admin: [
@@ -18,6 +22,11 @@ const links = {
     {
       to: '/admin/create-id',
       label: 'Create ID',
+    },
+    {
+      to: '/admin/signup-requests',
+      label: 'Signup Requests',
+      showPendingCount: true,
     },
     {
       to: '/admin/active-ids',
@@ -77,25 +86,76 @@ const portalName = (role) =>
       role.slice(1);
 
 export default function PortalLayout() {
-  const {
-    user,
-    logout,
-  } = useAuth();
+  const { user, logout } = useAuth();
 
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
-  const handleLogout =
-    async () => {
-      await logout();
+  const [
+    pendingSignupCount,
+    setPendingSignupCount,
+  ] = useState(0);
 
-      navigate(
-        '/login',
-        {
-          replace: true,
+  useEffect(() => {
+    if (user.role !== 'admin') {
+      return undefined;
+    }
+
+    let active = true;
+
+    const refreshCount = async () => {
+      try {
+        const result =
+          await getSignupRequestCount();
+
+        if (active) {
+          setPendingSignupCount(
+            result.count || 0
+          );
         }
+      } catch {
+        if (active) {
+          setPendingSignupCount(0);
+        }
+      }
+    };
+
+    refreshCount();
+
+    const intervalId =
+      window.setInterval(
+        refreshCount,
+        5000
+      );
+
+    window.addEventListener(
+      SIGNUP_REQUESTS_CHANGED_EVENT,
+      refreshCount
+    );
+
+    return () => {
+      active = false;
+
+      window.clearInterval(
+        intervalId
+      );
+
+      window.removeEventListener(
+        SIGNUP_REQUESTS_CHANGED_EVENT,
+        refreshCount
       );
     };
+  }, [user.role]);
+
+  const handleLogout = async () => {
+    await logout();
+
+    navigate(
+      '/login',
+      {
+        replace: true,
+      }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -107,10 +167,7 @@ export default function PortalLayout() {
             </p>
 
             <h1 className="text-lg font-bold text-slate-900">
-              {portalName(
-                user.role
-              )}{' '}
-              Portal
+              {portalName(user.role)} Portal
             </h1>
           </div>
 
@@ -121,16 +178,12 @@ export default function PortalLayout() {
               </p>
 
               <p className="text-xs text-slate-500">
-                {portalName(
-                  user.role
-                )}
+                {portalName(user.role)}
               </p>
             </div>
 
             <button
-              onClick={
-                handleLogout
-              }
+              onClick={handleLogout}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
             >
               Logout
@@ -142,31 +195,31 @@ export default function PortalLayout() {
       <div className="mx-auto grid max-w-7xl gap-6 px-5 py-6 md:grid-cols-[210px_1fr]">
         <aside className="h-fit rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <nav className="flex gap-2 overflow-x-auto md:flex-col">
-            {(
-              links[user.role] ||
-              []
-            ).map(
-              (link) => (
-                <NavLink
-                  key={
-                    link.to
-                  }
-                  to={link.to}
-                  end={link.end}
-                  className={({
-                    isActive,
-                  }) =>
-                    `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${
-                      isActive
-                        ? 'bg-blue-900 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
-                    }`
-                  }
-                >
+            {(links[user.role] || []).map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  `flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${
+                    isActive
+                      ? 'bg-blue-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`
+                }
+              >
+                <span>
                   {link.label}
-                </NavLink>
-              )
-            )}
+                </span>
+
+                {link.showPendingCount &&
+                  pendingSignupCount > 0 && (
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                      {pendingSignupCount}
+                    </span>
+                  )}
+              </NavLink>
+            ))}
           </nav>
         </aside>
 

@@ -19,6 +19,50 @@ const listActiveIds = async (req, res) => {
   });
 };
 
+const listSignupRequests = async (req, res) => {
+  const requests = await service.listSignupRequests();
+
+  res.json({
+    success: true,
+    requests,
+  });
+};
+
+const getSignupRequestCount = async (req, res) => {
+  const count = await service.getSignupRequestCount();
+
+  res.json({
+    success: true,
+    count,
+  });
+};
+
+const approveSignupRequest = async (req, res) => {
+  const user = await service.approveSignupRequest(
+    req.params.id,
+    req.user
+  );
+
+  res.json({
+    success: true,
+    message: 'Signup request approved and user ID created',
+    user,
+  });
+};
+
+const rejectSignupRequest = async (req, res) => {
+  const request = await service.rejectSignupRequest(
+    req.params.id,
+    req.user
+  );
+
+  res.json({
+    success: true,
+    message: 'Signup request rejected',
+    request,
+  });
+};
+
 const listUsers = async (req, res) => {
   const users = await service.listUsers(req.user);
 
@@ -59,6 +103,10 @@ const updateStatus = async (req, res) => {
 module.exports = {
   createUser,
   listActiveIds,
+  listSignupRequests,
+  getSignupRequestCount,
+  approveSignupRequest,
+  rejectSignupRequest,
   listUsers,
   updateRole,
   updateStatus,

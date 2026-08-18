@@ -30,6 +30,9 @@ import AdminDashboard
 import CreateId
   from './pages/admin/CreateId';
 
+import SignupRequests
+  from './pages/admin/SignupRequests';
+
 import ActiveIds
   from './pages/admin/ActiveIds';
 
@@ -97,6 +100,13 @@ export default function App() {
                 path="create-id"
                 element={
                   <CreateId />
+                }
+              />
+
+              <Route
+                path="signup-requests"
+                element={
+                  <SignupRequests />
                 }
               />
 

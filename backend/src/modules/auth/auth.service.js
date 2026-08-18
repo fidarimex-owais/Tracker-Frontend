@@ -8,10 +8,18 @@ const {
   findUserById,
 } = require('./auth.model');
 
+const {
+  getSignupRequestModel,
+  findPendingSignupRequestByEmail,
+} = require('./signupRequest.model');
+
 const SALT_ROUNDS = 12;
 
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
+  userName: user.userName || '',
+  companyName: user.companyName || '',
+  mobileNumber: user.mobileNumber || '',
   email: user.email,
   role: user.role,
   isActive: user.isActive,
@@ -19,40 +27,70 @@ const sanitizeUser = (user) => ({
   updatedAt: user.updatedAt,
 });
 
+const sanitizeSignupRequest = (request) => ({
+  id: request._id.toString(),
+  companyName: request.companyName,
+  userName: request.userName,
+  mobileNumber: request.mobileNumber,
+  email: request.email,
+  role: request.role,
+  status: request.status,
+  createdAt: request.createdAt,
+});
+
 const signup = async ({
+  companyName,
+  userName,
+  mobileNumber,
   email,
+  role,
   password,
 }) => {
   const normalizedEmail = email
     .trim()
     .toLowerCase();
 
-  const existing = await findUserByEmail(
+  const existingUser = await findUserByEmail(
     normalizedEmail
   );
 
-  if (existing) {
+  if (existingUser) {
     throw createHttpError(
       409,
       'An account with this email already exists'
     );
   }
 
-  const User = getUserModel();
+  const pendingRequest =
+    await findPendingSignupRequestByEmail(
+      normalizedEmail
+    );
+
+  if (pendingRequest) {
+    throw createHttpError(
+      409,
+      'A signup request with this email is already waiting for Admin approval'
+    );
+  }
+
+  const SignupRequest = getSignupRequestModel();
 
   const passwordHash = await bcrypt.hash(
     password,
     SALT_ROUNDS
   );
 
-  const user = await User.create({
+  const request = await SignupRequest.create({
+    companyName,
+    userName,
+    mobileNumber,
     email: normalizedEmail,
+    role,
     passwordHash,
-    role: 'vendor',
-    isActive: true,
+    status: 'pending',
   });
 
-  return sanitizeUser(user);
+  return sanitizeSignupRequest(request);
 };
 
 const login = async ({
@@ -176,7 +214,7 @@ const ensureAdminUser = async () => {
     );
   }
 
-  let existing = await findUserByEmail(
+  const existing = await findUserByEmail(
     email,
     {
       includePassword: true,
