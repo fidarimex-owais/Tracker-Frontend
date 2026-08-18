@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* Remove native up/down spinner arrows from number inputs (Line Number,
+   Weight if ever switched back, Latitude, Longitude). Needs both rules —
+   Chrome/Safari/Edge use the webkit pseudo-elements, Firefox uses
+   -moz-appearance instead. Neither works without the other. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
