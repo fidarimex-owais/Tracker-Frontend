@@ -1,10 +1,10 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
-const COMPANY_OPTIONS = [
+const BRAND_OPTIONS = [
+  'Hi Banana',
   'Rajmata',
-  'Korhale',
-  'Jaywant',
+  'Banana Man',
 ];
 
 const ROLE_OPTIONS = [
@@ -13,11 +13,23 @@ const ROLE_OPTIONS = [
   'supervisor',
 ];
 
+const BRAND_REQUIRED_ROLES = [
+  'vendor',
+  'supervisor',
+];
+
 const validateCreateId = (req, res, next) => {
-  const companyName =
-    typeof req.body?.companyName === 'string'
-      ? req.body.companyName.trim()
+  const role =
+    typeof req.body?.role === 'string'
+      ? req.body.role.trim().toLowerCase()
       : '';
+
+  const brandName =
+    typeof req.body?.brandName === 'string'
+      ? req.body.brandName.trim()
+      : typeof req.body?.companyName === 'string'
+        ? req.body.companyName.trim()
+        : '';
 
   const userName =
     typeof req.body?.userName === 'string'
@@ -36,11 +48,6 @@ const validateCreateId = (req, res, next) => {
       ? req.body.email.trim().toLowerCase()
       : '';
 
-  const role =
-    typeof req.body?.role === 'string'
-      ? req.body.role.trim().toLowerCase()
-      : '';
-
   const password =
     typeof req.body?.password === 'string'
       ? req.body.password
@@ -53,10 +60,20 @@ const validateCreateId = (req, res, next) => {
 
   const errors = [];
 
-  if (!COMPANY_OPTIONS.includes(companyName)) {
+  if (!ROLE_OPTIONS.includes(role)) {
     errors.push({
-      field: 'companyName',
-      message: 'Select Rajmata, Korhale, or Jaywant',
+      field: 'role',
+      message: 'Select Vendor, Sub-Admin, or Supervisor',
+    });
+  }
+
+  if (
+    BRAND_REQUIRED_ROLES.includes(role) &&
+    !BRAND_OPTIONS.includes(brandName)
+  ) {
+    errors.push({
+      field: 'brandName',
+      message: 'Select Hi Banana, Rajmata, or Banana Man',
     });
   }
 
@@ -78,13 +95,6 @@ const validateCreateId = (req, res, next) => {
     errors.push({
       field: 'email',
       message: 'Enter a valid email address',
-    });
-  }
-
-  if (!ROLE_OPTIONS.includes(role)) {
-    errors.push({
-      field: 'role',
-      message: 'Select Vendor, Sub-Admin, or Supervisor',
     });
   }
 
@@ -111,7 +121,9 @@ const validateCreateId = (req, res, next) => {
   }
 
   req.body = {
-    companyName,
+    brandName: BRAND_REQUIRED_ROLES.includes(role)
+      ? brandName
+      : '',
     userName,
     mobileNumber,
     email,
@@ -124,7 +136,8 @@ const validateCreateId = (req, res, next) => {
 };
 
 module.exports = {
-  COMPANY_OPTIONS,
+  BRAND_OPTIONS,
   ROLE_OPTIONS,
+  BRAND_REQUIRED_ROLES,
   validateCreateId,
 };

@@ -3,7 +3,6 @@ const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
 const authorize = require('../../middleware/role.middleware');
 const controller = require('./admin.controller');
-
 const {
   validateCreateId,
 } = require('./admin.validation');
@@ -46,7 +45,6 @@ router.patch(
   asyncHandler(controller.rejectSignupRequest)
 );
 
-// Existing user-management endpoints are kept for backward compatibility.
 router.get(
   '/users',
   asyncHandler(controller.listUsers)
@@ -55,6 +53,11 @@ router.get(
 router.patch(
   '/users/:id/role',
   asyncHandler(controller.updateRole)
+);
+
+router.patch(
+  '/users/:id/brand',
+  asyncHandler(controller.updateBrand)
 );
 
 router.patch(

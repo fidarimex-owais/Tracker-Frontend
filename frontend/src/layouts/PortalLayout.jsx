@@ -24,13 +24,17 @@ const links = {
       label: 'Create ID',
     },
     {
+      to: '/admin/users',
+      label: 'User',
+    },
+    {
       to: '/admin/signup-requests',
-      label: 'Signup Requests',
+      label: 'Signup Request',
       showPendingCount: true,
     },
     {
-      to: '/admin/active-ids',
-      label: 'Active IDs',
+      to: '/admin/qr-generator',
+      label: 'Generate QR',
     },
   ],
 
@@ -41,16 +45,21 @@ const links = {
       end: true,
     },
     {
-      to: '/sub-admin/users',
-      label: 'Users',
+      to: '/sub-admin/create-id',
+      label: 'Create ID',
     },
     {
-      to: '/sub-admin/scanner',
-      label: 'Scanner',
+      to: '/sub-admin/signup-requests',
+      label: 'Signup Request',
+      showPendingCount: true,
+    },
+    {
+      to: '/sub-admin/users',
+      label: 'User',
     },
     {
       to: '/sub-admin/qr-generator',
-      label: 'QR Generator',
+      label: 'Generate QR',
     },
   ],
 
@@ -61,8 +70,17 @@ const links = {
       end: true,
     },
     {
-      to: '/vendor/qr-generator',
-      label: 'QR Generator',
+      to: '/vendor/create-id',
+      label: 'Create ID',
+    },
+    {
+      to: '/vendor/signup-requests',
+      label: 'Signup Request',
+      showPendingCount: true,
+    },
+    {
+      to: '/vendor/users',
+      label: 'User',
     },
   ],
 
@@ -72,22 +90,19 @@ const links = {
       label: 'Dashboard',
       end: true,
     },
-    {
-      to: '/supervisor/scanner',
-      label: 'Scanner',
-    },
   ],
 };
 
 const portalName = (role) =>
   role === 'subadmin'
     ? 'Sub-Admin'
-    : role.charAt(0).toUpperCase() +
-      role.slice(1);
+    : role.charAt(0).toUpperCase() + role.slice(1);
+
+const canReviewSignupRequests = (role) =>
+  ['admin', 'subadmin', 'vendor'].includes(role);
 
 export default function PortalLayout() {
   const { user, logout } = useAuth();
-
   const navigate = useNavigate();
 
   const [
@@ -96,7 +111,7 @@ export default function PortalLayout() {
   ] = useState(0);
 
   useEffect(() => {
-    if (user.role !== 'admin') {
+    if (!canReviewSignupRequests(user.role)) {
       return undefined;
     }
 
@@ -104,13 +119,12 @@ export default function PortalLayout() {
 
     const refreshCount = async () => {
       try {
-        const result =
-          await getSignupRequestCount();
+        const result = await getSignupRequestCount(
+          user.role
+        );
 
         if (active) {
-          setPendingSignupCount(
-            result.count || 0
-          );
+          setPendingSignupCount(result.count || 0);
         }
       } catch {
         if (active) {
@@ -121,11 +135,10 @@ export default function PortalLayout() {
 
     refreshCount();
 
-    const intervalId =
-      window.setInterval(
-        refreshCount,
-        5000
-      );
+    const intervalId = window.setInterval(
+      refreshCount,
+      5000
+    );
 
     window.addEventListener(
       SIGNUP_REQUESTS_CHANGED_EVENT,
@@ -135,9 +148,7 @@ export default function PortalLayout() {
     return () => {
       active = false;
 
-      window.clearInterval(
-        intervalId
-      );
+      window.clearInterval(intervalId);
 
       window.removeEventListener(
         SIGNUP_REQUESTS_CHANGED_EVENT,
@@ -149,12 +160,9 @@ export default function PortalLayout() {
   const handleLogout = async () => {
     await logout();
 
-    navigate(
-      '/login',
-      {
-        replace: true,
-      }
-    );
+    navigate('/login', {
+      replace: true,
+    });
   };
 
   return (
@@ -208,9 +216,7 @@ export default function PortalLayout() {
                   }`
                 }
               >
-                <span>
-                  {link.label}
-                </span>
+                <span>{link.label}</span>
 
                 {link.showPendingCount &&
                   pendingSignupCount > 0 && (

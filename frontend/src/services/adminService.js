@@ -3,15 +3,34 @@ import api from './api';
 export const SIGNUP_REQUESTS_CHANGED_EVENT =
   'signup-requests-changed';
 
-const userBase = (role) =>
-  role === 'subadmin'
-    ? '/api/sub-admin/users'
-    : '/api/admin/users';
+const portalBase = (actorRole) => {
+  if (actorRole === 'admin') {
+    return '/api/admin';
+  }
 
-export const createId = async (payload) =>
+  if (actorRole === 'subadmin') {
+    return '/api/sub-admin';
+  }
+
+  if (actorRole === 'vendor') {
+    return '/api/vendor';
+  }
+
+  throw new Error(
+    'This role does not have account-management access'
+  );
+};
+
+const userBase = (actorRole) =>
+  `${portalBase(actorRole)}/users`;
+
+export const createId = async (
+  payload,
+  actorRole
+) =>
   (
     await api.post(
-      '/api/admin/users',
+      `${portalBase(actorRole)}/users`,
       payload
     )
   ).data;
@@ -23,31 +42,41 @@ export const getActiveIds = async () =>
     )
   ).data;
 
-export const getSignupRequests = async () =>
+export const getSignupRequests = async (
+  actorRole
+) =>
   (
     await api.get(
-      '/api/admin/signup-requests'
+      `${portalBase(actorRole)}/signup-requests`
     )
   ).data;
 
-export const getSignupRequestCount = async () =>
+export const getSignupRequestCount = async (
+  actorRole
+) =>
   (
     await api.get(
-      '/api/admin/signup-requests/count'
+      `${portalBase(actorRole)}/signup-requests/count`
     )
   ).data;
 
-export const approveSignupRequest = async (id) =>
+export const approveSignupRequest = async (
+  id,
+  actorRole
+) =>
   (
     await api.patch(
-      `/api/admin/signup-requests/${id}/approve`
+      `${portalBase(actorRole)}/signup-requests/${id}/approve`
     )
   ).data;
 
-export const rejectSignupRequest = async (id) =>
+export const rejectSignupRequest = async (
+  id,
+  actorRole
+) =>
   (
     await api.patch(
-      `/api/admin/signup-requests/${id}/reject`
+      `${portalBase(actorRole)}/signup-requests/${id}/reject`
     )
   ).data;
 
@@ -69,6 +98,18 @@ export const updateUserRole = async (
     await api.patch(
       `${userBase(actorRole)}/${id}/role`,
       { role }
+    )
+  ).data;
+
+export const updateUserBrand = async (
+  id,
+  brandName,
+  actorRole = 'admin'
+) =>
+  (
+    await api.patch(
+      `${userBase(actorRole)}/${id}/brand`,
+      { brandName }
     )
   ).data;
 

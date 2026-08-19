@@ -1,42 +1,42 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
-import { AuthShell } from './Login';
+import {
+  Alert,
+  AuthField,
+  AuthShell,
+} from './Login';
 
-const COMPANY_OPTIONS = [
+const BRAND_OPTIONS = [
+  'Hi Banana',
   'Rajmata',
-  'Korhale',
-  'Jaywant',
+  'Banana Man',
 ];
 
-const ROLE_OPTIONS = [
-  {
-    value: 'vendor',
-    label: 'Vendor',
-  },
-  {
-    value: 'subadmin',
-    label: 'Sub-Admin',
-  },
-  {
-    value: 'supervisor',
-    label: 'Supervisor',
-  },
-];
+const SIGNUP_ROLE_LABELS = {
+  vendor: 'Vendor',
+  supervisor: 'Supervisor',
+};
 
 const INITIAL_FORM = {
-  companyName: '',
+  brandName: '',
   userName: '',
   mobileNumber: '',
   email: '',
-  role: '',
   password: '',
   confirmPassword: '',
 };
 
 export default function Signup() {
   const { user, signup } = useAuth();
+  const [searchParams] = useSearchParams();
+  const selectedRole = searchParams.get('role') || '';
+  const roleLabel = SIGNUP_ROLE_LABELS[selectedRole];
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -45,7 +45,21 @@ export default function Signup() {
   const [busy, setBusy] = useState(false);
 
   if (user) {
-    return <Navigate to={roleHome(user.role)} replace />;
+    return (
+      <Navigate
+        to={roleHome(user.role)}
+        replace
+      />
+    );
+  }
+
+  if (!roleLabel) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
   const handleChange = (event) => {
@@ -74,11 +88,14 @@ export default function Signup() {
     setBusy(true);
 
     try {
-      const result = await signup(form);
+      const result = await signup({
+        ...form,
+        role: selectedRole,
+      });
 
       setSuccess(
         result.message ||
-          'Signup request submitted. You can sign in after Admin approval.'
+          'Signup request submitted. You can sign in after your request is approved.'
       );
 
       setForm(INITIAL_FORM);
@@ -100,70 +117,85 @@ export default function Signup() {
 
   return (
     <AuthShell
-      title="Request an account"
-      subtitle="Submit your details for Admin approval. You can sign in after the request is approved."
+      title={`${roleLabel} Sign Up`}
+      subtitle={`Register as a ${roleLabel}. Select your brand and submit your request for approval.`}
+      icon="📝"
     >
-      <form onSubmit={submit} className="space-y-4">
+      <form
+        onSubmit={submit}
+        className="space-y-4"
+      >
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
+          <Alert>{error}</Alert>
         )}
 
         {success && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-700">
-            <p className="font-semibold">
-              Request sent successfully.
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm leading-6 text-green-700">
+            <p className="font-bold">
+              Signup request sent successfully.
             </p>
 
             <p className="mt-1">
               {success}
             </p>
+
+            <Link
+              to={`/login?role=${selectedRole}`}
+              className="mt-2 inline-block font-bold underline"
+            >
+              Back to {roleLabel} Login
+            </Link>
           </div>
         )}
 
-        <SignupField
-          label="Company Name"
-          error={fieldErrors.companyName}
+        <AuthField
+          label="Brand"
+          error={fieldErrors.brandName}
         >
           <select
             required
-            name="companyName"
-            value={form.companyName}
+            name="brandName"
+            value={form.brandName}
             onChange={handleChange}
-            className={inputClass(fieldErrors.companyName)}
+            className={inputClass(
+              fieldErrors.brandName,
+              true
+            )}
           >
             <option value="">
-              Select company
+              Select Brand
             </option>
 
-            {COMPANY_OPTIONS.map((company) => (
+            {BRAND_OPTIONS.map((brand) => (
               <option
-                key={company}
-                value={company}
+                key={brand}
+                value={brand}
               >
-                {company}
+                {brand}
               </option>
             ))}
           </select>
-        </SignupField>
+        </AuthField>
 
-        <SignupField
-          label="User Name"
+        <AuthField
+          label="Full Name"
           error={fieldErrors.userName}
         >
           <input
             required
             type="text"
             name="userName"
+            autoComplete="name"
             value={form.userName}
             onChange={handleChange}
-            placeholder="Enter your name"
-            className={inputClass(fieldErrors.userName)}
+            placeholder="Full Name"
+            className={inputClass(
+              fieldErrors.userName
+            )}
           />
-        </SignupField>
+        </AuthField>
 
-        <SignupField
+        <AuthField
           label="Mobile Number"
           error={fieldErrors.mobileNumber}
         >
@@ -171,55 +203,35 @@ export default function Signup() {
             required
             type="tel"
             name="mobileNumber"
+            autoComplete="tel"
             value={form.mobileNumber}
             onChange={handleChange}
-            placeholder="Enter mobile number"
-            className={inputClass(fieldErrors.mobileNumber)}
+            placeholder="Mobile Number"
+            className={inputClass(
+              fieldErrors.mobileNumber
+            )}
           />
-        </SignupField>
+        </AuthField>
 
-        <SignupField
-          label="Gmail / Email ID"
+        <AuthField
+          label="Email ID"
           error={fieldErrors.email}
         >
           <input
             required
             type="email"
             name="email"
+            autoComplete="email"
             value={form.email}
             onChange={handleChange}
-            placeholder="Enter email address"
-            className={inputClass(fieldErrors.email)}
+            placeholder="Email Address"
+            className={inputClass(
+              fieldErrors.email
+            )}
           />
-        </SignupField>
+        </AuthField>
 
-        <SignupField
-          label="Role"
-          error={fieldErrors.role}
-        >
-          <select
-            required
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className={inputClass(fieldErrors.role)}
-          >
-            <option value="">
-              Select role
-            </option>
-
-            {ROLE_OPTIONS.map((role) => (
-              <option
-                key={role.value}
-                value={role.value}
-              >
-                {role.label}
-              </option>
-            ))}
-          </select>
-        </SignupField>
-
-        <SignupField
+        <AuthField
           label="Password"
           error={fieldErrors.password}
         >
@@ -231,12 +243,14 @@ export default function Signup() {
             autoComplete="new-password"
             value={form.password}
             onChange={handleChange}
-            placeholder="Create password"
-            className={inputClass(fieldErrors.password)}
+            placeholder="Password"
+            className={inputClass(
+              fieldErrors.password
+            )}
           />
-        </SignupField>
+        </AuthField>
 
-        <SignupField
+        <AuthField
           label="Confirm Password"
           error={fieldErrors.confirmPassword}
         >
@@ -248,26 +262,28 @@ export default function Signup() {
             autoComplete="new-password"
             value={form.confirmPassword}
             onChange={handleChange}
-            placeholder="Re-enter password"
-            className={inputClass(fieldErrors.confirmPassword)}
+            placeholder="Confirm Password"
+            className={inputClass(
+              fieldErrors.confirmPassword
+            )}
           />
-        </SignupField>
+        </AuthField>
 
         <button
+          type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-blue-900 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60"
+          className="w-full rounded-xl bg-amber-500 px-4 py-3.5 text-base font-bold text-slate-950 shadow-lg shadow-amber-200 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy
-            ? 'Sending request...'
-            : 'Submit Signup Request'}
+            ? 'Sending Request...'
+            : 'Sign Up →'}
         </button>
 
-        <p className="text-center text-sm text-slate-500">
-          Already approved?{' '}
-
+        <p className="text-center text-sm text-slate-600">
+          Already have an account?{' '}
           <Link
-            to="/login"
-            className="font-semibold text-blue-800"
+            to={`/login?role=${selectedRole}`}
+            className="font-bold text-amber-600 hover:text-amber-700"
           >
             Login
           </Link>
@@ -277,32 +293,12 @@ export default function Signup() {
   );
 }
 
-function SignupField({
-  label,
-  error,
-  children,
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-        {label}
-      </span>
-
-      {children}
-
-      {error && (
-        <span className="mt-1 block text-xs font-medium text-red-600">
-          {error}
-        </span>
-      )}
-    </label>
-  );
-}
-
-function inputClass(error) {
-  return `w-full rounded-lg border px-3.5 py-3 text-sm outline-none focus:ring-2 ${
+function inputClass(error, highlight = false) {
+  return `w-full rounded-xl border bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
     error
-      ? 'border-red-300 focus:border-red-600 focus:ring-red-100'
-      : 'border-slate-300 focus:border-blue-700 focus:ring-blue-100'
+      ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-100'
+      : highlight
+        ? 'border-amber-400 ring-1 ring-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-100'
+        : 'border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-100'
   }`;
 }

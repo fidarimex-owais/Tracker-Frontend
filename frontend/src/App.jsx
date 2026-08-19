@@ -5,54 +5,23 @@ import {
   Routes,
 } from 'react-router-dom';
 
-import {
-  AuthProvider,
-} from './auth/AuthContext';
+import { AuthProvider } from './auth/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
+import PortalHomeRedirect from './components/PortalHomeRedirect';
+import PortalLayout from './layouts/PortalLayout';
 
-import ProtectedRoute
-  from './auth/ProtectedRoute';
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
 
-import PortalHomeRedirect
-  from './components/PortalHomeRedirect';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import CreateId from './pages/admin/CreateId';
+import SignupRequests from './pages/admin/SignupRequests';
+import UserManagement from './pages/admin/UserManagement';
 
-import PortalLayout
-  from './layouts/PortalLayout';
-
-import Login
-  from './pages/auth/Login';
-
-import Signup
-  from './pages/auth/Signup';
-
-import AdminDashboard
-  from './pages/admin/AdminDashboard';
-
-import CreateId
-  from './pages/admin/CreateId';
-
-import SignupRequests
-  from './pages/admin/SignupRequests';
-
-import ActiveIds
-  from './pages/admin/ActiveIds';
-
-import UserManagement
-  from './pages/admin/UserManagement';
-
-import SubAdminDashboard
-  from './pages/subadmin/SubAdminDashboard';
-
-import VendorDashboard
-  from './pages/vendor/VendorDashboard';
-
-import SupervisorDashboard
-  from './pages/supervisor/SupervisorDashboard';
-
-import Scanner
-  from './pages/supervisor/Scanner';
-
-import QRCodeGenerator
-  from './pages/QRCodeGenerator';
+import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
+import VendorDashboard from './pages/vendor/VendorDashboard';
+import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
+import QRCodeGenerator from './pages/QRCodeGenerator';
 
 export default function App() {
   return (
@@ -71,167 +40,131 @@ export default function App() {
 
           <Route
             path="/"
-            element={
-              <PortalHomeRedirect />
-            }
+            element={<PortalHomeRedirect />}
           />
 
           <Route
             element={
-              <ProtectedRoute
-                roles={['admin']}
-              />
+              <ProtectedRoute roles={['admin']} />
             }
           >
             <Route
               path="/admin"
-              element={
-                <PortalLayout />
-              }
+              element={<PortalLayout />}
             >
               <Route
                 index
-                element={
-                  <AdminDashboard />
-                }
+                element={<AdminDashboard />}
               />
 
               <Route
                 path="create-id"
-                element={
-                  <CreateId />
-                }
-              />
-
-              <Route
-                path="signup-requests"
-                element={
-                  <SignupRequests />
-                }
-              />
-
-              <Route
-                path="active-ids"
-                element={
-                  <ActiveIds />
-                }
-              />
-            </Route>
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute
-                roles={[
-                  'subadmin',
-                ]}
-              />
-            }
-          >
-            <Route
-              path="/sub-admin"
-              element={
-                <PortalLayout />
-              }
-            >
-              <Route
-                index
-                element={
-                  <SubAdminDashboard />
-                }
+                element={<CreateId />}
               />
 
               <Route
                 path="users"
-                element={
-                  <UserManagement />
-                }
+                element={<UserManagement />}
               />
 
               <Route
-                path="scanner"
-                element={
-                  <Scanner />
-                }
+                path="signup-requests"
+                element={<SignupRequests />}
               />
 
               <Route
                 path="qr-generator"
-                element={
-                  <QRCodeGenerator />
-                }
+                element={<QRCodeGenerator />}
               />
             </Route>
           </Route>
 
           <Route
             element={
-              <ProtectedRoute
-                roles={['vendor']}
+              <ProtectedRoute roles={['subadmin']} />
+            }
+          >
+            <Route
+              path="/sub-admin"
+              element={<PortalLayout />}
+            >
+              <Route
+                index
+                element={<SubAdminDashboard />}
               />
+
+              <Route
+                path="create-id"
+                element={<CreateId />}
+              />
+
+              <Route
+                path="signup-requests"
+                element={<SignupRequests />}
+              />
+
+              <Route
+                path="users"
+                element={<UserManagement />}
+              />
+
+              <Route
+                path="qr-generator"
+                element={<QRCodeGenerator />}
+              />
+            </Route>
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute roles={['vendor']} />
             }
           >
             <Route
               path="/vendor"
-              element={
-                <PortalLayout />
-              }
+              element={<PortalLayout />}
             >
               <Route
                 index
-                element={
-                  <VendorDashboard />
-                }
+                element={<VendorDashboard />}
               />
 
               <Route
-                path="qr-generator"
-                element={
-                  <QRCodeGenerator />
-                }
+                path="create-id"
+                element={<CreateId />}
+              />
+
+              <Route
+                path="signup-requests"
+                element={<SignupRequests />}
+              />
+
+              <Route
+                path="users"
+                element={<UserManagement />}
               />
             </Route>
           </Route>
 
           <Route
             element={
-              <ProtectedRoute
-                roles={[
-                  'supervisor',
-                ]}
-              />
+              <ProtectedRoute roles={['supervisor']} />
             }
           >
             <Route
               path="/supervisor"
-              element={
-                <PortalLayout />
-              }
+              element={<PortalLayout />}
             >
               <Route
                 index
-                element={
-                  <SupervisorDashboard />
-                }
-              />
-
-              <Route
-                path="scanner"
-                element={
-                  <Scanner />
-                }
+                element={<SupervisorDashboard />}
               />
             </Route>
           </Route>
 
           <Route
             path="*"
-            element={
-              <Navigate
-                to="/"
-                replace
-              />
-            }
+            element={<Navigate to="/" replace />}
           />
         </Routes>
       </AuthProvider>

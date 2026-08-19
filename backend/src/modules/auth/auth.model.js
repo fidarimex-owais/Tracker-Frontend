@@ -1,6 +1,17 @@
 const mongoose = require('mongoose');
 const { getUserDb } = require('../../config/db');
 
+const BRAND_OPTIONS = [
+  'Hi Banana',
+  'Rajmata',
+  'Banana Man',
+];
+
+const BRAND_ROLES = [
+  'vendor',
+  'supervisor',
+];
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -24,11 +35,19 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
-    companyName: {
+    brandName: {
       type: String,
-      enum: ['', 'Rajmata', 'Korhale', 'Jaywant'],
+      enum: ['', ...BRAND_OPTIONS],
       default: '',
       index: true,
+    },
+
+    // Legacy field kept so older credential documents can still be read.
+    // New code uses brandName only.
+    companyName: {
+      type: String,
+      trim: true,
+      default: '',
     },
 
     mobileNumber: {
@@ -62,6 +81,24 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.pre('validate', function enforceBrandAssignment() {
+  if (BRAND_ROLES.includes(this.role)) {
+    if (
+      !this.brandName &&
+      BRAND_OPTIONS.includes(this.companyName)
+    ) {
+      this.brandName = this.companyName;
+    }
+
+    if (!BRAND_OPTIONS.includes(this.brandName)) {
+      this.invalidate(
+        'brandName',
+        'Vendor and Supervisor accounts must have a valid brand'
+      );
+    }
+  }
+});
+
 const MODEL_NAME = 'UserCredential';
 const COLLECTION_NAME = 'credentials';
 
@@ -71,6 +108,36 @@ const ALL_ROLES = [
   'vendor',
   'supervisor',
 ];
+
+const getEffectiveBrand = (user) => {
+  if (!user) {
+    return '';
+  }
+
+  if (BRAND_OPTIONS.includes(user.brandName)) {
+    return user.brandName;
+  }
+
+  if (BRAND_OPTIONS.includes(user.companyName)) {
+    return user.companyName;
+  }
+
+  return '';
+};
+
+const buildBrandFilter = (brandName) => ({
+  $or: [
+    {
+      brandName,
+    },
+    {
+      brandName: {
+        $in: ['', null],
+      },
+      companyName: brandName,
+    },
+  ],
+});
 
 const getUserModel = () => {
   const userDb = getUserDb();
@@ -106,7 +173,6 @@ const findUserByEmail = async (
   }
 
   const User = getUserModel();
-
   const query = User.findOne({
     email: normalizedEmail,
   });
@@ -127,7 +193,6 @@ const findUserById = async (
   }
 
   const User = getUserModel();
-
   const query = User.findById(id);
 
   if (includePassword) {
@@ -138,33 +203,41 @@ const findUserById = async (
 };
 
 const listUsersByRoles = async (
-  roles = ALL_ROLES
+  roles = ALL_ROLES,
+  { brandName = '' } = {}
 ) => {
   const User = getUserModel();
-
   const validRoles = roles.filter((role) =>
     ALL_ROLES.includes(role)
   );
 
-  return User.find({
+  const filter = {
     role: {
       $in: validRoles,
     },
-  })
+  };
+
+  if (BRAND_OPTIONS.includes(brandName)) {
+    Object.assign(
+      filter,
+      buildBrandFilter(brandName)
+    );
+  }
+
+  return User.find(filter)
     .sort({
       createdAt: -1,
     })
     .lean();
 };
 
-const listAdminCreatedActiveUsers = async () => {
+const listActivePortalUsers = async () => {
   const User = getUserModel();
 
   return User.find({
-    createdByAdmin: true,
     isActive: true,
     role: {
-      $in: ['vendor', 'subadmin', 'supervisor'],
+      $in: ['subadmin', 'vendor', 'supervisor'],
     },
   })
     .sort({
@@ -174,11 +247,15 @@ const listAdminCreatedActiveUsers = async () => {
 };
 
 module.exports = {
+  BRAND_OPTIONS,
+  BRAND_ROLES,
   ALL_ROLES,
+  getEffectiveBrand,
+  buildBrandFilter,
   getUserModel,
   ensureCredentialCollection,
   findUserByEmail,
   findUserById,
   listUsersByRoles,
-  listAdminCreatedActiveUsers,
+  listActivePortalUsers,
 };

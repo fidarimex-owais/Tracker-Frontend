@@ -1,7 +1,10 @@
 const service = require('./admin.service');
 
 const createUser = async (req, res) => {
-  const user = await service.createUser(req.body);
+  const user = await service.createUser(
+    req.body,
+    req.user
+  );
 
   res.status(201).json({
     success: true,
@@ -20,7 +23,9 @@ const listActiveIds = async (req, res) => {
 };
 
 const listSignupRequests = async (req, res) => {
-  const requests = await service.listSignupRequests();
+  const requests = await service.listSignupRequests(
+    req.user
+  );
 
   res.json({
     success: true,
@@ -29,7 +34,9 @@ const listSignupRequests = async (req, res) => {
 };
 
 const getSignupRequestCount = async (req, res) => {
-  const count = await service.getSignupRequestCount();
+  const count = await service.getSignupRequestCount(
+    req.user
+  );
 
   res.json({
     success: true,
@@ -45,7 +52,7 @@ const approveSignupRequest = async (req, res) => {
 
   res.json({
     success: true,
-    message: 'Signup request approved and user ID created',
+    message: 'Signup request approved and user ID activated',
     user,
   });
 };
@@ -86,6 +93,20 @@ const updateRole = async (req, res) => {
   });
 };
 
+const updateBrand = async (req, res) => {
+  const user = await service.updateBrand(
+    req.params.id,
+    req.body.brandName,
+    req.user
+  );
+
+  res.json({
+    success: true,
+    message: 'Brand updated',
+    user,
+  });
+};
+
 const updateStatus = async (req, res) => {
   const user = await service.updateStatus(
     req.params.id,
@@ -109,5 +130,6 @@ module.exports = {
   rejectSignupRequest,
   listUsers,
   updateRole,
+  updateBrand,
   updateStatus,
 };

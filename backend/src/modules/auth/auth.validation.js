@@ -1,19 +1,30 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
-const COMPANY_OPTIONS = [
+const BRAND_OPTIONS = [
+  'Hi Banana',
   'Rajmata',
-  'Korhale',
-  'Jaywant',
+  'Banana Man',
 ];
 
-const SIGNUP_ROLE_OPTIONS = [
-  'vendor',
+const LOGIN_ROLE_OPTIONS = [
+  'admin',
   'subadmin',
+  'vendor',
+  'supervisor',
+];
+
+const PUBLIC_SIGNUP_ROLE_OPTIONS = [
+  'vendor',
   'supervisor',
 ];
 
 const validateCredentials = (req, res, next) => {
+  const role =
+    typeof req.body?.role === 'string'
+      ? req.body.role.trim().toLowerCase()
+      : '';
+
   const email =
     typeof req.body?.email === 'string'
       ? req.body.email.trim().toLowerCase()
@@ -25,6 +36,13 @@ const validateCredentials = (req, res, next) => {
       : '';
 
   const errors = [];
+
+  if (!LOGIN_ROLE_OPTIONS.includes(role)) {
+    errors.push({
+      field: 'role',
+      message: 'Select Admin, Sub-Admin, Vendor, or Supervisor',
+    });
+  }
 
   if (!EMAIL_RE.test(email)) {
     errors.push({
@@ -49,6 +67,7 @@ const validateCredentials = (req, res, next) => {
   }
 
   req.body = {
+    role,
     email,
     password,
   };
@@ -57,10 +76,17 @@ const validateCredentials = (req, res, next) => {
 };
 
 const validateSignupRequest = (req, res, next) => {
-  const companyName =
-    typeof req.body?.companyName === 'string'
-      ? req.body.companyName.trim()
+  const role =
+    typeof req.body?.role === 'string'
+      ? req.body.role.trim().toLowerCase()
       : '';
+
+  const brandName =
+    typeof req.body?.brandName === 'string'
+      ? req.body.brandName.trim()
+      : typeof req.body?.companyName === 'string'
+        ? req.body.companyName.trim()
+        : '';
 
   const userName =
     typeof req.body?.userName === 'string'
@@ -79,11 +105,6 @@ const validateSignupRequest = (req, res, next) => {
       ? req.body.email.trim().toLowerCase()
       : '';
 
-  const role =
-    typeof req.body?.role === 'string'
-      ? req.body.role.trim().toLowerCase()
-      : '';
-
   const password =
     typeof req.body?.password === 'string'
       ? req.body.password
@@ -96,17 +117,24 @@ const validateSignupRequest = (req, res, next) => {
 
   const errors = [];
 
-  if (!COMPANY_OPTIONS.includes(companyName)) {
+  if (!PUBLIC_SIGNUP_ROLE_OPTIONS.includes(role)) {
     errors.push({
-      field: 'companyName',
-      message: 'Select Rajmata, Korhale, or Jaywant',
+      field: 'role',
+      message: 'Public signup is available only for Vendor or Supervisor',
+    });
+  }
+
+  if (!BRAND_OPTIONS.includes(brandName)) {
+    errors.push({
+      field: 'brandName',
+      message: 'Select Hi Banana, Rajmata, or Banana Man',
     });
   }
 
   if (userName.length < 2) {
     errors.push({
       field: 'userName',
-      message: 'User name is required',
+      message: 'Full name is required',
     });
   }
 
@@ -121,13 +149,6 @@ const validateSignupRequest = (req, res, next) => {
     errors.push({
       field: 'email',
       message: 'Enter a valid email address',
-    });
-  }
-
-  if (!SIGNUP_ROLE_OPTIONS.includes(role)) {
-    errors.push({
-      field: 'role',
-      message: 'Select Vendor, Sub-Admin, or Supervisor',
     });
   }
 
@@ -154,11 +175,11 @@ const validateSignupRequest = (req, res, next) => {
   }
 
   req.body = {
-    companyName,
+    role,
+    brandName,
     userName,
     mobileNumber,
     email,
-    role,
     password,
     confirmPassword,
   };
@@ -167,8 +188,9 @@ const validateSignupRequest = (req, res, next) => {
 };
 
 module.exports = {
-  COMPANY_OPTIONS,
-  SIGNUP_ROLE_OPTIONS,
+  BRAND_OPTIONS,
+  LOGIN_ROLE_OPTIONS,
+  PUBLIC_SIGNUP_ROLE_OPTIONS,
   validateCredentials,
   validateSignupRequest,
 };

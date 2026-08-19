@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const {
+  BRAND_OPTIONS,
+  getEffectiveBrand,
   getUserModel,
   ensureCredentialCollection,
   findUserByEmail,
@@ -10,6 +12,7 @@ const {
 
 const {
   getSignupRequestModel,
+  getApproverRolesForRequestRole,
   findPendingSignupRequestByEmail,
 } = require('./signupRequest.model');
 
@@ -18,7 +21,7 @@ const SALT_ROUNDS = 12;
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
   userName: user.userName || '',
-  companyName: user.companyName || '',
+  brandName: getEffectiveBrand(user),
   mobileNumber: user.mobileNumber || '',
   email: user.email,
   role: user.role,
@@ -29,17 +32,18 @@ const sanitizeUser = (user) => ({
 
 const sanitizeSignupRequest = (request) => ({
   id: request._id.toString(),
-  companyName: request.companyName,
+  brandName: request.brandName,
   userName: request.userName,
   mobileNumber: request.mobileNumber,
   email: request.email,
   role: request.role,
   status: request.status,
+  eligibleApproverRoles: request.eligibleApproverRoles || [],
   createdAt: request.createdAt,
 });
 
 const signup = async ({
-  companyName,
+  brandName,
   userName,
   mobileNumber,
   email,
@@ -49,6 +53,23 @@ const signup = async ({
   const normalizedEmail = email
     .trim()
     .toLowerCase();
+
+  if (!BRAND_OPTIONS.includes(brandName)) {
+    throw createHttpError(
+      400,
+      'Select a valid brand'
+    );
+  }
+
+  const eligibleApproverRoles =
+    getApproverRolesForRequestRole(role);
+
+  if (eligibleApproverRoles.length === 0) {
+    throw createHttpError(
+      403,
+      'Public signup is available only for Vendor or Supervisor'
+    );
+  }
 
   const existingUser = await findUserByEmail(
     normalizedEmail
@@ -69,24 +90,24 @@ const signup = async ({
   if (pendingRequest) {
     throw createHttpError(
       409,
-      'A signup request with this email is already waiting for Admin approval'
+      'A signup request with this email is already waiting for approval'
     );
   }
 
   const SignupRequest = getSignupRequestModel();
-
   const passwordHash = await bcrypt.hash(
     password,
     SALT_ROUNDS
   );
 
   const request = await SignupRequest.create({
-    companyName,
+    brandName,
     userName,
     mobileNumber,
     email: normalizedEmail,
     role,
     passwordHash,
+    eligibleApproverRoles,
     status: 'pending',
   });
 
@@ -94,6 +115,7 @@ const signup = async ({
 };
 
 const login = async ({
+  role,
   email,
   password,
 }) => {
@@ -111,6 +133,18 @@ const login = async ({
     );
   }
 
+  const matches = await bcrypt.compare(
+    password,
+    user.passwordHash
+  );
+
+  if (!matches || user.role !== role) {
+    throw createHttpError(
+      401,
+      'Invalid role, email, or password'
+    );
+  }
+
   if (!user.isActive) {
     throw createHttpError(
       403,
@@ -118,15 +152,13 @@ const login = async ({
     );
   }
 
-  const matches = await bcrypt.compare(
-    password,
-    user.passwordHash
-  );
-
-  if (!matches) {
+  if (
+    ['vendor', 'supervisor'].includes(user.role) &&
+    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
+  ) {
     throw createHttpError(
-      401,
-      'Invalid email or password'
+      403,
+      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
     );
   }
 
@@ -147,6 +179,16 @@ const getUserById = async (id) => {
     throw createHttpError(
       403,
       'This account has been deactivated'
+    );
+  }
+
+  if (
+    ['vendor', 'supervisor'].includes(user.role) &&
+    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
+  ) {
+    throw createHttpError(
+      403,
+      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
     );
   }
 
@@ -242,7 +284,6 @@ const ensureAdminUser = async () => {
   }
 
   const User = getUserModel();
-
   const passwordHash = await bcrypt.hash(
     password,
     SALT_ROUNDS
@@ -265,9 +306,7 @@ const createHttpError = (
   message
 ) => {
   const error = new Error(message);
-
   error.statusCode = statusCode;
-
   return error;
 };
 
