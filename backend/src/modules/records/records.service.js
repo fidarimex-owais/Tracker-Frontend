@@ -1,13 +1,33 @@
 const { getModelForBrand } = require('./records.model');
-const { generateBarcodeIds } = require('../barcode/barcode.service');
+const {
+  generateBarcodeIds,
+  syncLineToBarcodeDatabase,
+  removeBarcodeLine,
+} = require('../barcode/barcode.service');
 
 const HAND_VALUES = [4, 5, 6, 8];
+
+const syncSavedLine = async ({
+  Model,
+  document,
+  line,
+  brandName,
+}) => {
+  await syncLineToBarcodeDatabase({
+    packageDate: document.packageDate,
+    vendorName: line.vendorName,
+    brandName,
+    line,
+    sourceCollection: Model.collection.collectionName,
+    sourcePackageId: document._id,
+  });
+};
 
 /**
  * Creates one line under the brand/package-date document.
  *
- * Records owns persistence. Barcode generation is delegated to the barcode
- * module; QR images and sticker files are not generated during this write.
+ * The original data remains in qr_brand_details. After the QR record is
+ * saved, the same line + generated barcode IDs are mirrored into barcode_data.
  */
 const submitLine = async (payload) => {
   const Model = getModelForBrand(payload.brandName);
@@ -22,6 +42,14 @@ const submitLine = async (payload) => {
 
     await document.save();
     const newLine = document.lines[document.lines.length - 1];
+
+    await syncSavedLine({
+      Model,
+      document,
+      line: newLine,
+      brandName: payload.brandName,
+    });
+
     return { conflict: false, line: formatLine(payload, newLine) };
   }
 
@@ -47,14 +75,23 @@ const submitLine = async (payload) => {
   await document.save();
 
   const newLine = document.lines[document.lines.length - 1];
+
+  await syncSavedLine({
+    Model,
+    document,
+    line: newLine,
+    brandName: payload.brandName,
+  });
+
   return { conflict: false, line: formatLine(payload, newLine) };
 };
 
 /**
  * Resolves a duplicate line-number conflict.
- * - reuse: returns the existing line unchanged.
- * - update: replaces mutable line data and regenerates QR category
- *   subdocuments + barcode IDs from the newly submitted quantities.
+ * - reuse: returns the existing line unchanged and ensures barcode_data has
+ *   the same mirrored data.
+ * - update: replaces mutable line data, regenerates QR/barcode IDs, and then
+ *   replaces the mirrored barcode_data line.
  */
 const resolveConflict = async ({ brandName, packageDate, lineNumber, action, payload }) => {
   const Model = getModelForBrand(brandName);
@@ -71,12 +108,21 @@ const resolveConflict = async ({ brandName, packageDate, lineNumber, action, pay
   }
 
   if (action === 'reuse') {
+    await syncSavedLine({
+      Model,
+      document,
+      line,
+      brandName,
+    });
+
     return { line: formatLine({ brandName, packageDate }, line) };
   }
 
   if (action !== 'update') {
     throw createHttpError(400, `Invalid action "${action}". Must be "reuse" or "update".`);
   }
+
+  const previousVendorName = line.vendorName;
 
   line.vendorName = payload.vendorName;
   line.farmerName = payload.farmerName;
@@ -87,6 +133,21 @@ const resolveConflict = async ({ brandName, packageDate, lineNumber, action, pay
   line.qrCodes = buildQrCodes(payload.quantities);
 
   await document.save();
+
+  await syncSavedLine({
+    Model,
+    document,
+    line,
+    brandName,
+  });
+
+  if (previousVendorName !== line.vendorName) {
+    await removeBarcodeLine({
+      packageDate: document.packageDate,
+      vendorName: previousVendorName,
+      lineNumber,
+    });
+  }
 
   return { line: formatLine({ brandName, packageDate }, line) };
 };

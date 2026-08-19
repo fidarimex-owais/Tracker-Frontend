@@ -1,4 +1,5 @@
 const ALLOWED_BRANDS = ['Hi Banana', 'Joker', 'Banana Man'];
+const ALLOWED_VENDORS = ['Yogesh Korhale', 'Sachin Markad', 'Tannaji Kashid'];
 const HAND_CATEGORIES = [4, 5, 6, 8];
 
 const isNonEmptyString = (value) =>
@@ -76,6 +77,11 @@ const validateLineFields = (body, errors) => {
 
   if (!isNonEmptyString(body.vendorName)) {
     errors.push({ field: 'vendorName', message: 'vendorName is required and must be a string' });
+  } else if (!ALLOWED_VENDORS.includes(body.vendorName.trim())) {
+    errors.push({
+      field: 'vendorName',
+      message: `vendorName must be one of: ${ALLOWED_VENDORS.join(', ')}`,
+    });
   }
 
   if (!isNonEmptyString(body.farmerName)) {
@@ -86,8 +92,11 @@ const validateLineFields = (body, errors) => {
     errors.push({ field: 'supervisor', message: 'supervisor is required and must be a string' });
   }
 
-  if (!isFiniteNumber(body.lineNumber) || body.lineNumber <= 0) {
-    errors.push({ field: 'lineNumber', message: 'lineNumber is required and must be a positive number' });
+  if (!Number.isInteger(body.lineNumber) || body.lineNumber < 1) {
+    errors.push({
+      field: 'lineNumber',
+      message: 'lineNumber must be a natural number (positive integer)',
+    });
   }
 
   if (!isFiniteNumber(body.weight) || body.weight <= 0) {
@@ -192,10 +201,10 @@ const validateResolveConflict = (req, res, next) => {
     });
   }
 
-  if (!isFiniteNumber(body.lineNumber) || body.lineNumber <= 0) {
+  if (!Number.isInteger(body.lineNumber) || body.lineNumber < 1) {
     errors.push({
       field: 'lineNumber',
-      message: 'lineNumber is required and must be a positive number',
+      message: 'lineNumber must be a natural number (positive integer)',
     });
   }
 
