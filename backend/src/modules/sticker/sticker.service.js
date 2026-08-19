@@ -99,13 +99,14 @@ const buildZipFilename = (numberOfHands, brandName, packageDate) => {
 
 const streamCategoryZip = async ({
   numberOfHands,
+  qrPayload,
   qrUniqueId,
   brandName,
   packageDate,
   barcodeIds,
   res,
 }) => {
-  const qrPngBase64 = await generateQrBase64(qrUniqueId);
+  const qrPngBase64 = await generateQrBase64(qrPayload ?? qrUniqueId);
   const zipFilename = buildZipFilename(numberOfHands, brandName, packageDate);
 
   res.setHeader('Content-Type', 'application/zip');
@@ -156,11 +157,12 @@ const streamCategoryZip = async ({
 };
 
 const buildPrintPageHTML = async ({
+  qrPayload,
   qrUniqueId,
   numberOfHands,
   barcodeIds,
 }) => {
-  const qrPngBase64 = await generateQrBase64(qrUniqueId);
+  const qrPngBase64 = await generateQrBase64(qrPayload ?? qrUniqueId);
   const stickerImages = [];
 
   for (const barcodeId of barcodeIds) {

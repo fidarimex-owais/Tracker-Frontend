@@ -1,8 +1,17 @@
-const service = require('./scanning.service');
+const scanningService = require('./scanning.service');
 
-const resolveCode = async (req, res) => {
-  const data = await service.resolveCode(req.query.code);
-  res.json({ success: true, data });
+const scanQr = async (req, res) => {
+  const data = await scanningService.scanQr(
+    req.body._id
+  );
+
+  return res.status(200).json({
+    success: true,
+    message: 'QR data retrieved successfully',
+    data,
+  });
 };
 
-module.exports = { resolveCode };
+module.exports = {
+  scanQr,
+};

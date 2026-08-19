@@ -179,7 +179,10 @@ const getCategoryForDelivery = async ({ brandName, packageDate, lineNumber, numb
   }
 
   return {
-    qrUniqueId: qrCategory._id.toString(),
+    // Every physical QR for this parent record encodes ONLY the plain
+    // parent MongoDB ObjectId string, for example:
+    // 6a8579ab27e6a71a5ddf7993
+    qrPayload: document._id.toString(),
     numberOfHands: qrCategory.numberOfHands,
     quantity: qrCategory.quantity,
     barcodeIds: qrCategory.stickers.map((sticker) => sticker.barcodeId),
