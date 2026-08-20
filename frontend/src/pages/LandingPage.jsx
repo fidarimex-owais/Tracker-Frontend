@@ -32,7 +32,7 @@ export default function LandingPage() {
                 className="group inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-xl bg-[#ff6a00] px-7 text-xl font-bold text-white shadow-[0_12px_28px_rgba(255,106,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#ef6100] focus:outline-none focus:ring-4 focus:ring-orange-200 sm:w-auto sm:min-w-[210px] lg:min-h-[68px] lg:min-w-[220px]"
               >
                 <SignInIcon />
-                <span>Sign In</span>
+                <span>Login</span>
               </Link>
 
               <Link
@@ -40,7 +40,7 @@ export default function LandingPage() {
                 className="group inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-xl border-2 border-[#ff6a00] bg-white/90 px-7 text-xl font-bold text-[#ff6a00] transition hover:-translate-y-0.5 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:w-auto sm:min-w-[210px] lg:min-h-[68px] lg:min-w-[220px]"
               >
                 <SignUpIcon />
-                <span>Sign Up</span>
+                <span>Register</span>
               </Link>
             </div>
           </div>

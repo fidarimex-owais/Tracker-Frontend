@@ -186,7 +186,7 @@ export default function PortalLayout() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-600">
               QR Operations
             </p>
 
@@ -227,7 +227,7 @@ export default function PortalLayout() {
                 className={({ isActive }) =>
                   `flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${
                     isActive
-                      ? 'bg-blue-900 text-white'
+                      ? 'bg-orange-500 text-white'
                       : 'text-slate-600 hover:bg-slate-100'
                   }`
                 }

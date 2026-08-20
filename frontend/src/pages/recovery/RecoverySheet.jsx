@@ -149,7 +149,7 @@ export default function RecoverySheet() {
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+        <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
           Recovery
         </p>
 
@@ -173,7 +173,7 @@ export default function RecoverySheet() {
               value={packagingDate}
               disabled={loadingOptions}
               onChange={handlePackagingDateChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             >
               <option value="">
                 {loadingOptions ? 'Loading...' : 'Select Packaging Date'}
@@ -196,7 +196,7 @@ export default function RecoverySheet() {
               value={vendorName}
               disabled={!packagingDate}
               onChange={handleVendorNameChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             >
               <option value="">Select Vendor Name</option>
 
@@ -217,7 +217,7 @@ export default function RecoverySheet() {
               value={lineNumber}
               disabled={!vendorName}
               onChange={handleLineNumberChange}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             >
               <option value="">Select Line Number</option>
 
@@ -296,7 +296,7 @@ export default function RecoverySheet() {
                       <td className="px-4 py-3 text-center font-semibold text-slate-900">
                         {row.total}
                       </td>
-                      <td className="px-4 py-3 text-center font-semibold text-blue-800">
+                      <td className="px-4 py-3 text-center font-semibold text-orange-600">
                         {formatPercentage(row.recoveryPercentage)}
                       </td>
                     </tr>

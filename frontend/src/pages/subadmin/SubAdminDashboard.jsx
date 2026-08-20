@@ -7,7 +7,7 @@ export default function SubAdminDashboard() {
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-sm font-semibold text-blue-700">SUB-ADMIN</p>
+        <p className="text-sm font-semibold text-orange-600">SUB-ADMIN</p>
         <h2 className="text-3xl font-bold text-slate-900">Dashboard</h2>
         <p className="mt-2 text-slate-500">
           Signed in as {user.email}. Manage Vendor/Supervisor accounts, generate stickers,
@@ -44,7 +44,7 @@ function Card({ to, title, body }) {
     >
       <h3 className="font-bold text-slate-900">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-500">{body}</p>
-      <p className="mt-4 text-sm font-semibold text-blue-800">Open →</p>
+      <p className="mt-4 text-sm font-semibold text-orange-600">Open →</p>
     </Link>
   );
 }

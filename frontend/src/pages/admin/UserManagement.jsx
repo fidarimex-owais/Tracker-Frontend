@@ -247,7 +247,7 @@ export default function UserManagement() {
   return (
     <section>
       <div className="mb-6">
-        <p className="text-sm font-semibold text-blue-700">
+        <p className="text-sm font-semibold text-orange-600">
           {portalLabel(currentUser.role)}
         </p>
 
@@ -268,7 +268,7 @@ export default function UserManagement() {
             onClick={() => setRoleFilter(role)}
             className={`rounded-xl border px-4 py-3 text-left shadow-sm transition ${
               roleFilter === role
-                ? 'border-blue-800 bg-blue-900 text-white'
+                ? 'border-orange-500 bg-orange-500 text-white'
                 : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -364,7 +364,7 @@ export default function UserManagement() {
                       {user.email}
 
                       {user.id === currentUser.id && (
-                        <span className="ml-2 text-xs text-blue-700">
+                        <span className="ml-2 text-xs text-orange-600">
                           You
                         </span>
                       )}

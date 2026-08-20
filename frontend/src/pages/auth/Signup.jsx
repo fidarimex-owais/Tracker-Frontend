@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Link,
   Navigate,
+  useSearchParams,
 } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
@@ -9,6 +10,7 @@ import {
   Alert,
   AuthField,
   AuthShell,
+  inputClass,
 } from './Login';
 
 const BRAND_OPTIONS = [
@@ -33,8 +35,16 @@ const INITIAL_FORM = {
 
 export default function Signup() {
   const { user, signup } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedRole, setSelectedRole] = useState('');
+  const roleFromUrl = searchParams.get('role') || '';
+  const validInitialRole = SIGNUP_ROLE_OPTIONS.some(
+    (option) => option.value === roleFromUrl
+  )
+    ? roleFromUrl
+    : '';
+
+  const [selectedRole, setSelectedRole] = useState(validInitialRole);
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
@@ -62,6 +72,12 @@ export default function Signup() {
     setFieldErrors({});
     setError('');
     setSuccess('');
+
+    if (role) {
+      setSearchParams({ role }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
   };
 
   const handleChange = (event) => {
@@ -86,7 +102,7 @@ export default function Signup() {
 
     if (!selectedRole) {
       setFieldErrors({
-        role: 'Select Vendor or Supervisor before signing up',
+        role: 'Select Vendor or Supervisor before registering',
       });
       return;
     }
@@ -104,7 +120,7 @@ export default function Signup() {
 
       setSuccess(
         result.message ||
-          'Signup request submitted. You can sign in after your request is approved.'
+          'Registration request submitted. You can login after your request is approved.'
       );
 
       setForm(INITIAL_FORM);
@@ -126,66 +142,59 @@ export default function Signup() {
 
   return (
     <AuthShell
-      title={roleLabel ? `${roleLabel} Sign Up` : 'Sign Up'}
+      wide
+      title={roleLabel ? `${roleLabel} Register` : 'Register'}
       subtitle={
         roleLabel
-          ? `Register as a ${roleLabel}. Select your brand and submit your request for approval.`
-          : 'Select whether you want to register as a Vendor or Supervisor.'
+          ? `Create your ${roleLabel} account by filling in the details below.`
+          : 'Select a role to begin your registration.'
       }
-      icon="📝"
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         <AuthField
           label="Role"
           error={fieldErrors.role}
         >
-          <select
-            required
-            name="role"
-            value={selectedRole}
-            onChange={handleRoleChange}
-            className={inputClass(
-              fieldErrors.role,
-              true
-            )}
-          >
-            <option value="">
-              Select Role
-            </option>
-
-            {SIGNUP_ROLE_OPTIONS.map((role) => (
-              <option
-                key={role.value}
-                value={role.value}
-              >
-                {role.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <FieldIcon type="role" />
+            <select
+              required
+              name="role"
+              value={selectedRole}
+              onChange={handleRoleChange}
+              className={inputClass(fieldErrors.role, true)}
+            >
+              <option value="">Select Role</option>
+              {SIGNUP_ROLE_OPTIONS.map((role) => (
+                <option
+                  key={role.value}
+                  value={role.value}
+                >
+                  {role.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </AuthField>
 
         {roleLabel && (
           <form
             onSubmit={submit}
-            className="space-y-4"
+            className="space-y-3"
           >
             {error && (
               <Alert>{error}</Alert>
             )}
 
             {success && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm leading-6 text-green-700">
+              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-5 text-green-700 sm:text-sm">
                 <p className="font-bold">
-                  Signup request sent successfully.
+                  Registration request sent successfully.
                 </p>
-
-                <p className="mt-1">
-                  {success}
-                </p>
-
+                <p className="mt-1">{success}</p>
                 <Link
                   to={`/login?role=${selectedRole}`}
-                  className="mt-2 inline-block font-bold underline"
+                  className="mt-1 inline-block font-bold underline"
                 >
                   Back to {roleLabel} Login
                 </Link>
@@ -196,144 +205,159 @@ export default function Signup() {
               label="Brand"
               error={fieldErrors.brandName}
             >
-              <select
-                required
-                name="brandName"
-                value={form.brandName}
-                onChange={handleChange}
-                className={inputClass(
-                  fieldErrors.brandName,
-                  true
-                )}
+              <div className="relative">
+                <FieldIcon type="brand" />
+                <select
+                  required
+                  name="brandName"
+                  value={form.brandName}
+                  onChange={handleChange}
+                  className={inputClass(fieldErrors.brandName)}
+                >
+                  <option value="">Select Brand</option>
+                  {BRAND_OPTIONS.map((brand) => (
+                    <option
+                      key={brand}
+                      value={brand}
+                    >
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </AuthField>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AuthField
+                label="Full Name"
+                error={fieldErrors.userName}
               >
-                <option value="">
-                  Select Brand
-                </option>
+                <div className="relative">
+                  <FieldIcon type="person" />
+                  <input
+                    required
+                    type="text"
+                    name="userName"
+                    autoComplete="name"
+                    value={form.userName}
+                    onChange={handleChange}
+                    placeholder="Enter your full name"
+                    className={inputClass(fieldErrors.userName)}
+                  />
+                </div>
+              </AuthField>
 
-                {BRAND_OPTIONS.map((brand) => (
-                  <option
-                    key={brand}
-                    value={brand}
-                  >
-                    {brand}
-                  </option>
-                ))}
-              </select>
-            </AuthField>
-
-            <AuthField
-              label="Full Name"
-              error={fieldErrors.userName}
-            >
-              <input
-                required
-                type="text"
-                name="userName"
-                autoComplete="name"
-                value={form.userName}
-                onChange={handleChange}
-                placeholder="Full Name"
-                className={inputClass(
-                  fieldErrors.userName
-                )}
-              />
-            </AuthField>
-
-            <AuthField
-              label="Mobile Number"
-              error={fieldErrors.mobileNumber}
-            >
-              <input
-                required
-                type="tel"
-                name="mobileNumber"
-                autoComplete="tel"
-                value={form.mobileNumber}
-                onChange={handleChange}
-                placeholder="Mobile Number"
-                className={inputClass(
-                  fieldErrors.mobileNumber
-                )}
-              />
-            </AuthField>
+              <AuthField
+                label="Mobile Number"
+                error={fieldErrors.mobileNumber}
+              >
+                <div className="relative">
+                  <FieldIcon type="phone" />
+                  <input
+                    required
+                    type="tel"
+                    name="mobileNumber"
+                    autoComplete="tel"
+                    value={form.mobileNumber}
+                    onChange={handleChange}
+                    placeholder="Enter mobile number"
+                    className={inputClass(fieldErrors.mobileNumber)}
+                  />
+                </div>
+              </AuthField>
+            </div>
 
             <AuthField
               label="Email ID"
               error={fieldErrors.email}
             >
-              <input
-                required
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Email Address"
-                className={inputClass(
-                  fieldErrors.email
-                )}
-              />
+              <div className="relative">
+                <FieldIcon type="email" />
+                <input
+                  required
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  className={inputClass(fieldErrors.email)}
+                />
+              </div>
             </AuthField>
 
-            <AuthField
-              label="Password"
-              error={fieldErrors.password}
-            >
-              <input
-                required
-                type="password"
-                name="password"
-                minLength="8"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Password"
-                className={inputClass(
-                  fieldErrors.password
-                )}
-              />
-            </AuthField>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AuthField
+                label="Password"
+                error={fieldErrors.password}
+              >
+                <div className="relative">
+                  <FieldIcon type="lock" />
+                  <input
+                    required
+                    type="password"
+                    name="password"
+                    minLength="8"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Enter password"
+                    className={inputClass(fieldErrors.password)}
+                  />
+                </div>
+              </AuthField>
 
-            <AuthField
-              label="Confirm Password"
-              error={fieldErrors.confirmPassword}
-            >
+              <AuthField
+                label="Confirm Password"
+                error={fieldErrors.confirmPassword}
+              >
+                <div className="relative">
+                  <FieldIcon type="lock" />
+                  <input
+                    required
+                    type="password"
+                    name="confirmPassword"
+                    minLength="8"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm password"
+                    className={inputClass(fieldErrors.confirmPassword)}
+                  />
+                </div>
+              </AuthField>
+            </div>
+
+            <label className="flex items-start gap-2 text-xs text-slate-600 sm:text-sm">
               <input
                 required
-                type="password"
-                name="confirmPassword"
-                minLength="8"
-                autoComplete="new-password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm Password"
-                className={inputClass(
-                  fieldErrors.confirmPassword
-                )}
+                type="checkbox"
+                className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-orange-500"
               />
-            </AuthField>
+              <span>
+                I agree to the{' '}
+                <span className="font-semibold text-orange-600">
+                  Terms & Conditions
+                </span>
+              </span>
+            </label>
 
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-xl bg-amber-500 px-4 py-3.5 text-base font-bold text-slate-950 shadow-lg shadow-amber-200 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
             >
-              {busy
-                ? 'Sending Request...'
-                : 'Sign Up →'}
+              <RegisterIcon />
+              {busy ? 'Sending Request...' : 'Register'}
             </button>
           </form>
         )}
 
-        <p className="text-center text-sm text-slate-600">
+        <p className="text-center text-xs text-slate-600 sm:text-sm">
           Already have an account?{' '}
           <Link
-            to={
-              selectedRole
-                ? `/login?role=${selectedRole}`
-                : '/login'
-            }
-            className="font-bold text-amber-600 hover:text-amber-700"
+            to={selectedRole ? `/login?role=${selectedRole}` : '/login'}
+            className="font-bold text-orange-600 hover:text-orange-700"
           >
             Login
           </Link>
@@ -343,12 +367,55 @@ export default function Signup() {
   );
 }
 
-function inputClass(error, highlight = false) {
-  return `w-full rounded-xl border bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 ${
-    error
-      ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-100'
-      : highlight
-        ? 'border-amber-400 ring-1 ring-amber-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-100'
-        : 'border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-100'
-  }`;
+function FieldIcon({ type }) {
+  const common = 'h-4 w-4 sm:h-5 sm:w-5';
+
+  return (
+    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+      {type === 'role' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+        </svg>
+      )}
+      {type === 'brand' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 21V5l8-3 8 3v16" />
+          <path d="M8 8h2M8 12h2M14 8h2M14 12h2M10 21v-5h4v5" />
+        </svg>
+      )}
+      {type === 'person' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+        </svg>
+      )}
+      {type === 'phone' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M7 3h3l2 5-2 2a16 16 0 0 0 4 4l2-2 5 2v3c0 2-1 4-4 4C9 21 3 15 3 7c0-3 2-4 4-4Z" />
+        </svg>
+      )}
+      {type === 'email' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m4 7 8 6 8-6" />
+        </svg>
+      )}
+      {type === 'lock' && (
+        <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="5" y="10" width="14" height="10" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+function RegisterIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21a6 6 0 0 1 12 0M19 8v6M22 11h-6" />
+    </svg>
+  );
 }

@@ -216,7 +216,7 @@ export default function CreateId() {
     return (
       <section className="space-y-6">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+          <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
             {portalLabel(user.role)}
           </p>
           <h2 className="text-3xl font-bold text-slate-900">
@@ -234,7 +234,7 @@ export default function CreateId() {
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+        <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
           {portalLabel(user.role)}
         </p>
 
@@ -409,7 +409,7 @@ export default function CreateId() {
           <button
             type="submit"
             disabled={busy}
-            className="rounded-lg bg-blue-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? 'Creating ID...' : 'Create ID'}
           </button>
@@ -445,6 +445,6 @@ function inputClass(error) {
   return `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:ring-2 ${
     error
       ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
-      : 'border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+      : 'border-slate-300 focus:border-orange-500 focus:ring-orange-100'
   }`;
 }

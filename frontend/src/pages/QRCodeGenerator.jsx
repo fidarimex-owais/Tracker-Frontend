@@ -265,13 +265,13 @@ export default function QRCodeGenerator() {
                   <button
                     type="button"
                     onClick={() => handlePrint(z.numberOfHands)}
-                    className="rounded-md border border-blue-300 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50"
+                    className="rounded-md border border-orange-300 px-3 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50"
                   >
                     Print
                   </button>
                   <a
                     href={buildDownloadUrl(z.numberOfHands)}
-                    className="rounded-md bg-blue-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800"
+                    className="rounded-md bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600"
                   >
                     Download
                   </a>
@@ -454,7 +454,7 @@ export default function QRCodeGenerator() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-8 w-full bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-md transition-colors"
+          className="mt-8 w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-md transition-colors"
         >
           {submitting ? 'Generating...' : 'Generate Stickers'}
         </button>
@@ -476,7 +476,7 @@ function Field({ label, required, error, children }) {
 }
 
 const baseFieldClass =
-  'w-full rounded-md border px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'w-full rounded-md border px-3.5 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
 const inputClass = (hasError) =>
   `${baseFieldClass} ${hasError ? 'border-red-400' : 'border-slate-300'}`;
