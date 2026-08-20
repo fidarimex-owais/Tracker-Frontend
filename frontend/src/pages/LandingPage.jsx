@@ -14,23 +14,18 @@ export default function LandingPage() {
               className="mb-8 h-auto w-[300px] max-w-full object-contain object-left sm:w-[360px] lg:mb-[clamp(3.25rem,3vh,2.5rem)] lg:w-[clamp(300px,27vw,440px)]"
             />
 
-            <h1 className="max-w-[650px] text-[clamp(2.8rem,9vw,4.2rem)] font-extrabold leading-[1.03] tracking-[-0.045em] text-[#1f2529] sm:text-[clamp(3.2rem,7vw,4.3rem)] lg:text-[clamp(3.2rem,4vw,4.3rem)]">
-              <span className="block whitespace-nowrap">
-                Fidar Imex
-              </span>
-              <span className="block whitespace-nowrap">
-                Private Limited
-              </span>
+            <h1 className="max-w-[600px] text-[clamp(2.8rem,9vw, 2rem)] font-bold leading-[1.03] tracking-[-0.045em] text-[#1f2529] sm:text-[clamp(3.2rem,7vw,3rem)] lg:text-[clamp(3.2rem,4vw,4.3rem)]">
+              Import and Export of All Dry and Fresh Fruits
+
+              
             </h1>
 
-            <div className="mt-6 h-1 w-20 rounded-full bg-[#ff6a00] lg:mt-[clamp(1rem,2.5vh,1.75rem)]" />
+            <div className="mt-6 h-1 w-20 rounded-full bg-[#ff6a00] lg:mt-[clamp(2.5rem,2.5vh,1.75rem)]" />
 
             <p className="mt-6 max-w-[500px] text-xl font-medium leading-[1.4] text-[#555b61] sm:text-2xl lg:mt-[clamp(1rem,2.5vh,1.75rem)] lg:text-[clamp(1.2rem,1.55vw,1.75rem)]">
-              Import and Export of All
-              <br />
-              Dry and Fresh Fruits
+              {/* Global sourcing and distribution of premium quality dry and fresh fruits, ensuring freshness, taste, and nutritional value for our customers worldwide. */}
             </p>
-
+            <br />
             <div className="mt-9 flex flex-col gap-4 sm:flex-row lg:mt-[clamp(1.5rem,4vh,2.75rem)] lg:flex-nowrap">
               <Link
                 to="/login"
