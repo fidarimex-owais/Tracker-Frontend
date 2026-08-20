@@ -7,7 +7,7 @@ import {
 
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
-import PortalHomeRedirect from './components/PortalHomeRedirect';
+import LandingPage from './pages/LandingPage';
 import PortalLayout from './layouts/PortalLayout';
 
 import Login from './pages/auth/Login';
@@ -22,6 +22,7 @@ import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 import QRCodeGenerator from './pages/QRCodeGenerator';
+import RecoverySheet from './pages/recovery/RecoverySheet';
 
 export default function App() {
   return (
@@ -40,7 +41,7 @@ export default function App() {
 
           <Route
             path="/"
-            element={<PortalHomeRedirect />}
+            element={<LandingPage />}
           />
 
           <Route
@@ -75,6 +76,11 @@ export default function App() {
               <Route
                 path="qr-generator"
                 element={<QRCodeGenerator />}
+              />
+
+              <Route
+                path="recovery-sheets"
+                element={<RecoverySheet />}
               />
             </Route>
           </Route>
@@ -112,6 +118,11 @@ export default function App() {
                 path="qr-generator"
                 element={<QRCodeGenerator />}
               />
+
+              <Route
+                path="recovery-sheets"
+                element={<RecoverySheet />}
+              />
             </Route>
           </Route>
 
@@ -143,6 +154,11 @@ export default function App() {
                 path="users"
                 element={<UserManagement />}
               />
+
+              <Route
+                path="recovery-sheets"
+                element={<RecoverySheet />}
+              />
             </Route>
           </Route>
 
@@ -158,6 +174,11 @@ export default function App() {
               <Route
                 index
                 element={<SupervisorDashboard />}
+              />
+
+              <Route
+                path="recovery-sheets"
+                element={<RecoverySheet />}
               />
             </Route>
           </Route>

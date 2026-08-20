@@ -36,6 +36,10 @@ const links = {
       to: '/admin/qr-generator',
       label: 'Generate QR',
     },
+    {
+      to: '/admin/recovery-sheets',
+      label: 'Recovery Sheet',
+    },
   ],
 
   subadmin: [
@@ -61,6 +65,10 @@ const links = {
       to: '/sub-admin/qr-generator',
       label: 'Generate QR',
     },
+    {
+      to: '/sub-admin/recovery-sheets',
+      label: 'Recovery Sheet',
+    },
   ],
 
   vendor: [
@@ -82,6 +90,10 @@ const links = {
       to: '/vendor/users',
       label: 'User',
     },
+    {
+      to: '/vendor/recovery-sheets',
+      label: 'Recovery Sheet',
+    },
   ],
 
   supervisor: [
@@ -89,6 +101,10 @@ const links = {
       to: '/supervisor',
       label: 'Dashboard',
       end: true,
+    },
+    {
+      to: '/supervisor/recovery-sheets',
+      label: 'Recovery Sheet',
     },
   ],
 };
