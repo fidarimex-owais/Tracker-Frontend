@@ -14,6 +14,11 @@ router.use(
   authorize('admin')
 );
 
+router.get(
+  '/dashboard',
+  asyncHandler(controller.getDashboard)
+);
+
 router.post(
   '/users',
   validateCreateId,

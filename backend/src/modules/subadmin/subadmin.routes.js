@@ -14,13 +14,10 @@ router.use(
   authorize('subadmin')
 );
 
-router.get('/dashboard', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Sub-Admin portal access granted',
-    user: req.user,
-  });
-});
+router.get(
+  '/dashboard',
+  asyncHandler(adminController.getDashboard)
+);
 
 router.post(
   '/users',

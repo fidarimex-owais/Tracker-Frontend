@@ -1,5 +1,14 @@
 const service = require('./admin.service');
 
+const getDashboard = async (req, res) => {
+  const data = await service.getDashboardOverview(req.user);
+
+  res.json({
+    success: true,
+    data,
+  });
+};
+
 const createUser = async (req, res) => {
   const user = await service.createUser(
     req.body,
@@ -122,6 +131,7 @@ const updateStatus = async (req, res) => {
 };
 
 module.exports = {
+  getDashboard,
   createUser,
   listActiveIds,
   listSignupRequests,

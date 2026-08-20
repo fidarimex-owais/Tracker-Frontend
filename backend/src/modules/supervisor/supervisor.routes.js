@@ -1,8 +1,19 @@
 const express = require('express');
+const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
 const authorize = require('../../middleware/role.middleware');
+const adminController = require('../admin/admin.controller');
+
 const router = express.Router();
-router.get('/dashboard', authMiddleware, authorize('supervisor', 'admin'), (req, res) => {
-  res.json({ success: true, message: 'Supervisor portal access granted', user: req.user });
-});
+
+router.use(
+  authMiddleware,
+  authorize('supervisor')
+);
+
+router.get(
+  '/dashboard',
+  asyncHandler(adminController.getDashboard)
+);
+
 module.exports = router;

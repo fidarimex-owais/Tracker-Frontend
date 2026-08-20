@@ -27,6 +27,15 @@ const {
   sanitizeUser,
 } = require('../auth/auth.service');
 
+const {
+  getModelForBrand,
+  ALL_BRANDS,
+} = require('../records/records.model');
+
+const {
+  getRecoverySheetModel,
+} = require('../recovery/recovery.model');
+
 const SALT_ROUNDS = 12;
 
 const CREATABLE_ROLES_BY_ACTOR = {
@@ -715,6 +724,393 @@ const throwRequestDecisionError = async (
   );
 };
 
+const countGeneratedQrRecords = async () => {
+  const totals = await Promise.all(
+    ALL_BRANDS.map(async (brandName) => {
+      const Model = getModelForBrand(brandName);
+      const result = await Model.aggregate([
+        {
+          $unwind: '$lines',
+        },
+        {
+          $unwind: '$lines.qrCodes',
+        },
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $ifNull: ['$lines.qrCodes.quantity', 0],
+              },
+            },
+          },
+        },
+      ]);
+
+      return Number(result[0]?.total || 0);
+    })
+  );
+
+  return totals.reduce((sum, total) => sum + total, 0);
+};
+
+const buildSignupTrendForActor = async (actor) => {
+  const SignupRequest = getSignupRequestModel();
+  const startDate = new Date();
+
+  startDate.setUTCHours(0, 0, 0, 0);
+  startDate.setUTCDate(startDate.getUTCDate() - 6);
+
+  const reviewFilter = buildReviewFilterForActor(actor);
+
+  if (!reviewFilter) {
+    return buildEmptySevenDayTrend(startDate);
+  }
+
+  const aggregated = await SignupRequest.aggregate([
+    {
+      $match: {
+        ...reviewFilter,
+        createdAt: {
+          $gte: startDate,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: '%Y-%m-%d',
+            date: '$createdAt',
+            timezone: 'UTC',
+          },
+        },
+        count: {
+          $sum: 1,
+        },
+      },
+    },
+    {
+      $sort: {
+        _id: 1,
+      },
+    },
+  ]);
+
+  const counts = new Map(
+    aggregated.map((item) => [item._id, item.count])
+  );
+
+  return buildSevenDayTrend(startDate, counts);
+};
+
+const buildEmptySevenDayTrend = (startDate) =>
+  buildSevenDayTrend(startDate, new Map());
+
+const buildSevenDayTrend = (startDate, counts) => {
+  const monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setUTCDate(startDate.getUTCDate() + index);
+
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const key = `${year}-${month}-${day}`;
+
+    return {
+      date: key,
+      label: `${date.getUTCDate()} ${monthNames[date.getUTCMonth()]}`,
+      count: Number(counts.get(key) || 0),
+    };
+  });
+};
+
+const getRecentSignupRequestsForActor = async (
+  actor,
+  limit = 5
+) => {
+  const reviewFilter = buildReviewFilterForActor(actor);
+
+  if (!reviewFilter) {
+    return [];
+  }
+
+  const requests = await getSignupRequestModel()
+    .find(reviewFilter)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  return requests.map((request) => ({
+    id: request._id.toString(),
+    userName: request.userName,
+    brandName: getRequestBrand(request),
+    role: request.role,
+    email: request.email,
+    status: request.status,
+    createdAt: request.createdAt,
+  }));
+};
+
+const buildBrandSummary = (users) => {
+  const summary = BRAND_OPTIONS.map((brandName) => ({
+    brandName,
+    vendors: 0,
+    supervisors: 0,
+    totalUsers: 0,
+  }));
+
+  const index = new Map(
+    summary.map((item) => [item.brandName, item])
+  );
+
+  for (const user of users) {
+    const brandName = getEffectiveBrand(user);
+    const brand = index.get(brandName);
+
+    if (!brand) {
+      continue;
+    }
+
+    if (user.role === 'vendor') {
+      brand.vendors += 1;
+    }
+
+    if (user.role === 'supervisor') {
+      brand.supervisors += 1;
+    }
+
+    brand.totalUsers = brand.vendors + brand.supervisors;
+  }
+
+  return summary;
+};
+
+const getAdminDashboardOverview = async (actor) => {
+  const [
+    activeUsers,
+    pendingSignupRequests,
+    qrRecords,
+    recoverySheets,
+    recentSignupRequests,
+    signupTrend,
+  ] = await Promise.all([
+    listActivePortalUsers(),
+    countPendingSignupRequestsForActor(actor),
+    countGeneratedQrRecords(),
+    getRecoverySheetModel().countDocuments({}),
+    getRecentSignupRequestsForActor(actor),
+    buildSignupTrendForActor(actor),
+  ]);
+
+  const userSummary = {
+    subadmins: 0,
+    vendors: 0,
+    supervisors: 0,
+  };
+
+  for (const user of activeUsers) {
+    if (user.role === 'subadmin') {
+      userSummary.subadmins += 1;
+    } else if (user.role === 'vendor') {
+      userSummary.vendors += 1;
+    } else if (user.role === 'supervisor') {
+      userSummary.supervisors += 1;
+    }
+  }
+
+  return {
+    role: 'admin',
+    summary: {
+      totalUsers: activeUsers.length,
+      pendingSignupRequests,
+      qrRecords,
+      recoverySheets,
+    },
+    userSummary,
+    brandSummary: buildBrandSummary(activeUsers),
+    signupTrend,
+    recentSignupRequests,
+  };
+};
+
+const getSubAdminDashboardOverview = async (actor) => {
+  const [
+    manageableUsers,
+    pendingSignupRequests,
+    qrRecords,
+    recoverySheets,
+    recentSignupRequests,
+    signupTrend,
+  ] = await Promise.all([
+    listUsersByRoles(['vendor', 'supervisor']),
+    countPendingSignupRequestsForActor(actor),
+    countGeneratedQrRecords(),
+    getRecoverySheetModel().countDocuments({}),
+    getRecentSignupRequestsForActor(actor),
+    buildSignupTrendForActor(actor),
+  ]);
+
+  const activeUsers = manageableUsers.filter(
+    (user) => user.isActive
+  );
+
+  const userSummary = {
+    vendors: activeUsers.filter(
+      (user) => user.role === 'vendor'
+    ).length,
+    supervisors: activeUsers.filter(
+      (user) => user.role === 'supervisor'
+    ).length,
+  };
+
+  return {
+    role: 'subadmin',
+    summary: {
+      managedUsers: activeUsers.length,
+      pendingSignupRequests,
+      qrRecords,
+      recoverySheets,
+    },
+    userSummary,
+    brandSummary: buildBrandSummary(activeUsers),
+    signupTrend,
+    recentSignupRequests,
+  };
+};
+
+const getVendorDashboardOverview = async (actor) => {
+  const brandName = requireActorBrand(actor);
+
+  const [
+    supervisors,
+    pendingSignupRequests,
+    recoverySheets,
+    recentSignupRequests,
+    signupTrend,
+  ] = await Promise.all([
+    listUsersByRoles(
+      ['supervisor'],
+      {
+        brandName,
+      }
+    ),
+    countPendingSignupRequestsForActor(actor),
+    getRecoverySheetModel().countDocuments({}),
+    getRecentSignupRequestsForActor(actor),
+    buildSignupTrendForActor(actor),
+  ]);
+
+  const activeSupervisors = supervisors.filter(
+    (user) => user.isActive
+  );
+
+  return {
+    role: 'vendor',
+    brandName,
+    summary: {
+      totalSupervisors: supervisors.length,
+      activeSupervisors: activeSupervisors.length,
+      pendingSignupRequests,
+      recoverySheets,
+    },
+    supervisorSummary: {
+      total: supervisors.length,
+      active: activeSupervisors.length,
+      inactive: supervisors.length - activeSupervisors.length,
+    },
+    signupTrend,
+    recentSignupRequests,
+    recentSupervisors: supervisors
+      .slice(0, 5)
+      .map(sanitizePortalUser),
+  };
+};
+
+const getSupervisorDashboardOverview = async (actor) => {
+  const RecoverySheet = getRecoverySheetModel();
+
+  const [
+    recoverySheets,
+    recentRecoverySheets,
+  ] = await Promise.all([
+    RecoverySheet.countDocuments({}),
+    RecoverySheet.find({})
+      .select({
+        packagingDate: 1,
+        vendorName: 1,
+        lineNumber: 1,
+        generatedAt: 1,
+      })
+      .sort({
+        generatedAt: -1,
+      })
+      .limit(6)
+      .lean(),
+  ]);
+
+  return {
+    role: 'supervisor',
+    profile: {
+      userName: actor.userName || '',
+      email: actor.email,
+      brandName: getEffectiveBrand(actor),
+      isActive: actor.isActive,
+      role: actor.role,
+    },
+    summary: {
+      recoverySheets,
+    },
+    recentRecoverySheets: recentRecoverySheets.map(
+      (sheet) => ({
+        id: sheet._id.toString(),
+        packagingDate: sheet.packagingDate,
+        vendorName: sheet.vendorName,
+        lineNumber: sheet.lineNumber,
+        generatedAt: sheet.generatedAt,
+      })
+    ),
+  };
+};
+
+const getDashboardOverview = async (actor) => {
+  if (actor.role === 'admin') {
+    return getAdminDashboardOverview(actor);
+  }
+
+  if (actor.role === 'subadmin') {
+    return getSubAdminDashboardOverview(actor);
+  }
+
+  if (actor.role === 'vendor') {
+    return getVendorDashboardOverview(actor);
+  }
+
+  if (actor.role === 'supervisor') {
+    return getSupervisorDashboardOverview(actor);
+  }
+
+  throw createHttpError(
+    403,
+    'Dashboard access is not available for this role'
+  );
+};
+
 const formatRole = (role) => {
   if (role === 'subadmin') {
     return 'Sub-Admin';
@@ -739,6 +1135,7 @@ const createHttpError = (
 module.exports = {
   CREATABLE_ROLES_BY_ACTOR,
   getCreatableRoles,
+  getDashboardOverview,
   createUser,
   listActiveIds,
   listSignupRequests,

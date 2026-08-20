@@ -3,6 +3,32 @@ import api from './api';
 export const SIGNUP_REQUESTS_CHANGED_EVENT =
   'signup-requests-changed';
 
+export const getAdminDashboard = async () =>
+  (
+    await api.get('/api/admin/dashboard')
+  ).data;
+
+
+export const getPortalDashboard = async (actorRole) => {
+  const paths = {
+    subadmin: '/api/sub-admin/dashboard',
+    vendor: '/api/vendor/dashboard',
+    supervisor: '/api/supervisor/dashboard',
+  };
+
+  const path = paths[actorRole];
+
+  if (!path) {
+    throw new Error(
+      'Dashboard is not available for this role'
+    );
+  }
+
+  return (
+    await api.get(path)
+  ).data;
+};
+
 const portalBase = (actorRole) => {
   if (actorRole === 'admin') {
     return '/api/admin';
