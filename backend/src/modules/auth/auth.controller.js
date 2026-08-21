@@ -35,6 +35,7 @@ const login = async (req, res) => {
     success: true,
     message: 'Logged in',
     user,
+    token,
   });
 };
 

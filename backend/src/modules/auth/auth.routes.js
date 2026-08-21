@@ -1,6 +1,10 @@
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
+const {
+  loginRateLimiter,
+  signupRateLimiter,
+} = require('../../middleware/rateLimit.middleware');
 
 const {
   validateCredentials,
@@ -13,12 +17,14 @@ const router = express.Router();
 
 router.post(
   '/signup',
+  signupRateLimiter,
   validateSignupRequest,
   asyncHandler(controller.signup)
 );
 
 router.post(
   '/login',
+  loginRateLimiter,
   validateCredentials,
   asyncHandler(controller.login)
 );

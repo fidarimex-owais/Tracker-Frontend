@@ -1,0 +1,24 @@
+FROM node:22-bookworm-slim
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Install production dependencies first so Docker can cache this layer.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy only the backend source required at runtime.
+COPY src ./src
+
+# Run the application as the non-root Node user.
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 5000
+
+# Uses your existing GET /health endpoint.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 5000) + '/health').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));"
+
+CMD ["npm", "start"]

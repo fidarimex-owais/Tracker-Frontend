@@ -1,0 +1,14 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fidar-imex-backend
+    restart: unless-stopped
+    init: true
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      PORT: 5000
