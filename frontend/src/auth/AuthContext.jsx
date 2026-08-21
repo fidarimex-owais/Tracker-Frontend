@@ -54,6 +54,9 @@ export function AuthProvider({ children }) {
           await authService.logout();
         } finally {
           setUser(null);
+
+          // Always return to the public landing page after logout.
+          window.location.replace('/');
         }
       },
     }),

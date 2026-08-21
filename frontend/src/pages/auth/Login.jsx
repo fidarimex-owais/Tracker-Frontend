@@ -247,15 +247,7 @@ export default function Login() {
           </div>
         )}
 
-        {(selectedRole === 'admin' || selectedRole === 'subadmin') && (
-          <div className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs leading-5 text-slate-700 sm:text-sm">
-            Public registration is not available for{' '}
-            <span className="font-semibold">
-              {selectedRoleLabel}
-            </span>
-            . Login using credentials created for you by an authorized user.
-          </div>
-        )}
+
       </form>
     </AuthShell>
   );

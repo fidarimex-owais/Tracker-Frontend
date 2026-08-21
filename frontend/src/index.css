@@ -1,25 +1,15 @@
 @import "tailwindcss";
 
-/*
-  Fidar Imex portal theme.
-  This overrides Tailwind's orange palette globally so Admin, Sub-Admin,
-  Vendor and Supervisor portals all use the same primary orange.
-*/
+/* Fidar Imex primary orange */
 @theme {
-  --color-orange-50: oklch(0.98 0.025 53.71);
-  --color-orange-100: oklch(0.95 0.05 53.71);
-  --color-orange-200: oklch(0.91 0.08 53.71);
-  --color-orange-300: oklch(0.86 0.11 53.71);
-  --color-orange-400: oklch(0.82 0.13 53.71);
-
-  /* Exact requested portal orange */
+  --color-orange-50: oklch(0.98 0.025 56.71);
+  --color-orange-100: oklch(0.95 0.05 56.71);
+  --color-orange-200: oklch(0.91 0.08 56.71);
+  --color-orange-300: oklch(0.86 0.11 56.71);
+  --color-orange-400: oklch(0.81 0.14 56.71);
   --color-orange-500: oklch(0.76 0.17 56.71);
-
-  --color-orange-600: oklch(0.70 0.16 53.71);
-  --color-orange-700: oklch(0.62 0.15 53.71);
-  --color-orange-800: oklch(0.54 0.13 53.71);
-  --color-orange-900: oklch(0.46 0.11 53.71);
-  --color-orange-950: oklch(0.34 0.08 53.71);
+  --color-orange-600: oklch(0.69 0.18 56.71);
+  --color-orange-700: oklch(0.61 0.16 56.71);
 }
 
 
@@ -36,9 +26,4 @@ input[type='number']::-webkit-inner-spin-button {
 input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
-}
-
-/* Exact fallback for the main orange utility. */
-.bg-orange-500 {
-  background-color: oklch(0.76 0.17 56.71);
 }

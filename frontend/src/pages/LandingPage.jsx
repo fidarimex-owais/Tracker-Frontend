@@ -1,98 +1,169 @@
 import { Link } from 'react-router-dom';
+
 import fidarLogo from '../assets/fidar-imex-logo.png';
 import fruitHero from '../assets/fidar-fruit-hero.jpg';
+import qrHero from '../assets/qr-operations-hero.png';
+
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#fbfaf7] text-slate-900 lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden">
-      <section className="mx-auto grid min-h-screen max-w-[1800px] lg:h-full lg:min-h-0 lg:grid-cols-[48%_52%]">
-        <div className="relative z-10 flex items-center px-6 py-10 sm:px-10 lg:h-full lg:min-h-0 lg:px-[clamp(2.5rem,5vw,6rem)] lg:py-[clamp(1.25rem,3vh,2.75rem)]">
-          <div className="w-full max-w-[680px]">
+    <main className="min-h-screen overflow-x-hidden bg-white text-slate-950">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-6 px-5 sm:px-8">
+          <Link to="/" aria-label="Fidar Imex home">
             <img
               src={fidarLogo}
-              alt="Fidar Imex"
-              className="mb-8 h-auto w-[300px] max-w-full object-contain object-left sm:w-[360px] lg:mb-[clamp(3.25rem,3vh,2.5rem)] lg:w-[clamp(300px,27vw,440px)]"
+              alt="Fidar Imex Private Limited"
+              className="h-auto w-44 sm:w-52"
             />
+          </Link>
 
-            <h1 className="max-w-[600px] text-[clamp(2.8rem,9vw, 2rem)] font-bold leading-[1.03] tracking-[-0.045em] text-[#1f2529] sm:text-[clamp(3.2rem,7vw,3rem)] lg:text-[clamp(3.2rem,4vw,4.3rem)]">
-              Import and Export of All Dry and Fresh Fruits
+          <nav className="hidden items-center gap-8 text-sm font-bold text-slate-700 lg:flex">
+        
+            
+          </nav>
 
-              
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/login"
+              className="rounded-xl border border-slate-900 px-4 py-2.5 text-sm font-extrabold text-slate-950 transition hover:border-orange-500 hover:text-orange-600 sm:px-5"
+            >
+              Login
+            </Link>
+
+            <Link
+              to="/signup"
+              className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-orange-100 transition hover:-translate-y-0.5 hover:bg-orange-600 sm:px-5"
+            >
+              Register
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <section
+        id="home"
+        className="relative overflow-hidden border-b border-slate-200 bg-[#fffaf5]"
+      >
+        <div className="mx-auto grid min-h-[620px] max-w-7xl items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:py-14">
+          <div className="relative z-20">
+            <p className="mb-5 inline-flex rounded-full border border-orange-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-[0.18em] text-orange-600">
+              QR Operations Portal
+            </p>
+
+            <h1 className="max-w-2xl text-5xl font-black leading-[1.04] tracking-[-0.045em] text-slate-950 sm:text-6xl xl:text-7xl">
+              Simple QR Management for{' '}
+              <span className="text-orange-500">
+                Fidar Imex
+              </span>
             </h1>
 
-            <div className="mt-6 h-1 w-20 rounded-full bg-[#ff6a00] lg:mt-[clamp(2.5rem,2.5vh,1.75rem)]" />
-
-            <p className="mt-6 max-w-[500px] text-xl font-medium leading-[1.4] text-[#555b61] sm:text-2xl lg:mt-[clamp(1rem,2.5vh,1.75rem)] lg:text-[clamp(1.2rem,1.55vw,1.75rem)]">
-              {/* Global sourcing and distribution of premium quality dry and fresh fruits, ensuring freshness, taste, and nutritional value for our customers worldwide. */}
+            <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
+              Generate QR codes, retrieve stored records and access
+              operational Recovery Sheets from one secure portal.
             </p>
-            <br />
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row lg:mt-[clamp(1.5rem,4vh,2.75rem)] lg:flex-nowrap">
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/login"
-                className="group inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-xl bg-[#ff6a00] px-7 text-xl font-bold text-white shadow-[0_12px_28px_rgba(255,106,0,0.22)] transition hover:-translate-y-0.5 hover:bg-[#ef6100] focus:outline-none focus:ring-4 focus:ring-orange-200 sm:w-auto sm:min-w-[210px] lg:min-h-[68px] lg:min-w-[220px]"
+                className="inline-flex min-h-14 items-center justify-center rounded-xl bg-orange-500 px-7 text-base font-extrabold text-white shadow-xl shadow-orange-100 transition hover:-translate-y-0.5 hover:bg-orange-600"
               >
-                <SignInIcon />
-                <span>Login</span>
+                Login to Portal
               </Link>
 
               <Link
                 to="/signup"
-                className="group inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-xl border-2 border-[#ff6a00] bg-white/90 px-7 text-xl font-bold text-[#ff6a00] transition hover:-translate-y-0.5 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:w-auto sm:min-w-[210px] lg:min-h-[68px] lg:min-w-[220px]"
+                className="inline-flex min-h-14 items-center justify-center rounded-xl border border-slate-300 bg-white px-7 text-base font-extrabold text-slate-950 transition hover:border-orange-500 hover:text-orange-600"
               >
-                <SignUpIcon />
-                <span>Register</span>
+                Register
               </Link>
             </div>
+
+            <p className="mt-8 max-w-lg text-sm leading-6 text-slate-500">
+              Fidar Imex is a premium agro export company, with this
+              portal supporting its QR-based operational workflow.
+            </p>
           </div>
-        </div>
 
-        <div className="relative min-h-[360px] overflow-hidden sm:min-h-[430px] lg:h-full lg:min-h-0">
-          <div className="absolute inset-y-0 -left-24 z-10 hidden w-44 bg-gradient-to-r from-[#fbfaf7] via-[#fbfaf7]/85 to-transparent lg:block" />
+          <div className="relative min-h-[480px] lg:min-h-[550px]">
+            <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
+              <img
+                src={fruitHero}
+                alt="Fresh produce"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#fffaf5] via-white/5 to-transparent" />
+            </div>
 
-          <img
-            src={fruitHero}
-            alt="Fresh fruits"
-            className="h-full min-h-[360px] w-full object-cover object-center sm:min-h-[430px] lg:min-h-0"
-          />
+            <div className="absolute left-[9%] top-[15%] w-[46%] max-w-[300px] -rotate-3 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-300/40">
+              <img
+                src={qrHero}
+                alt="QR code example"
+                className="aspect-square w-full rounded-xl object-contain"
+              />
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#fbfaf7]/45 via-transparent to-transparent lg:from-[#fbfaf7]/18" />
+              <img
+                src={fidarLogo}
+                alt=""
+                className="mx-auto mt-4 w-40"
+              />
+            </div>
+
+            <div className="absolute bottom-[10%] right-[4%] w-[42%] min-w-[210px] max-w-[260px] rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-xl backdrop-blur">
+              <SmallStat
+                title="Generate"
+                text="Create QR-linked records"
+              />
+              <SmallStat
+                title="Scan"
+                text="Retrieve stored information"
+              />
+              <SmallStat
+                title="Review"
+                text="View Recovery Sheets"
+                last
+              />
+            </div>
+          </div>
         </div>
       </section>
     </main>
   );
 }
 
-function SignInIcon() {
+
+function SmallStat({ title, text, last = false }) {
+  return (
+    <div
+      className={`py-3 ${last ? '' : 'border-b border-slate-200'}`}
+    >
+      <p className="text-sm font-black text-slate-950">
+        {title}
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+
+function IconBase({ children }) {
   return (
     <svg
-      aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-7 w-7 fill-none stroke-current"
-      strokeWidth="1.9"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <path d="M10 17l5-5-5-5" />
-      <path d="M15 12H3" />
-      <path d="M14 3h4a3 3 0 013 3v12a3 3 0 01-3 3h-4" />
+      {children}
     </svg>
   );
 }
 
-function SignUpIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-7 w-7 fill-none stroke-current"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M15 20a6 6 0 00-12 0" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M19 8v6" />
-      <path d="M16 11h6" />
-    </svg>
-  );
-}
+
+
