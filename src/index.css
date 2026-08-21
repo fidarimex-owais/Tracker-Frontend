@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* Fidar Imex primary orange */
+@theme {
+  --color-orange-50: oklch(0.98 0.025 56.71);
+  --color-orange-100: oklch(0.95 0.05 56.71);
+  --color-orange-200: oklch(0.91 0.08 56.71);
+  --color-orange-300: oklch(0.86 0.11 56.71);
+  --color-orange-400: oklch(0.81 0.14 56.71);
+  --color-orange-500: oklch(0.76 0.17 56.71);
+  --color-orange-600: oklch(0.69 0.18 56.71);
+  --color-orange-700: oklch(0.61 0.16 56.71);
+}
+
+
+/* Remove native up/down spinner arrows from number inputs (Line Number,
+   Weight if ever switched back, Latitude, Longitude). Needs both rules —
+   Chrome/Safari/Edge use the webkit pseudo-elements, Firefox uses
+   -moz-appearance instead. Neither works without the other. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
