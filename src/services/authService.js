@@ -1,4 +1,4 @@
-import api from './api';
+import api, { setAuthToken } from './api';
 
 const normalize = (error, fallback) => {
   const err = new Error(error.response?.data?.message || fallback);
@@ -8,12 +8,34 @@ const normalize = (error, fallback) => {
 };
 
 export const signup = async (credentials) => {
-  try { return (await api.post('/api/auth/signup', credentials)).data; }
-  catch (error) { throw normalize(error, 'Unable to sign up'); }
+  try {
+    return (await api.post('/api/auth/signup', credentials)).data;
+  } catch (error) {
+    throw normalize(error, 'Unable to sign up');
+  }
 };
+
 export const login = async (credentials) => {
-  try { return (await api.post('/api/auth/login', credentials)).data; }
-  catch (error) { throw normalize(error, 'Unable to log in'); }
+  try {
+    const result = (await api.post('/api/auth/login', credentials)).data;
+
+    if (result.token) {
+      setAuthToken(result.token);
+    }
+
+    return result;
+  } catch (error) {
+    setAuthToken(null);
+    throw normalize(error, 'Unable to log in');
+  }
 };
-export const logout = async () => (await api.post('/api/auth/logout')).data;
+
+export const logout = async () => {
+  try {
+    return (await api.post('/api/auth/logout')).data;
+  } finally {
+    setAuthToken(null);
+  }
+};
+
 export const getMe = async () => (await api.get('/api/auth/me')).data;
