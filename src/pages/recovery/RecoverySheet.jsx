@@ -153,7 +153,7 @@ export default function RecoverySheet() {
           Recovery
         </p>
 
-        <h2 className="text-3xl font-bold text-slate-900">
+        <h2 className="text-2xl font-bold sm:text-3xl text-slate-900">
           Recovery Sheet
         </h2>
 
@@ -162,7 +162,7 @@ export default function RecoverySheet() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="grid gap-4 md:grid-cols-3">
           <label className="block">
             <span className="mb-1.5 block text-sm font-semibold text-slate-700">
@@ -257,8 +257,8 @@ export default function RecoverySheet() {
             <Info label="Line Number" value={`Line ${sheet.lineNumber}`} />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full text-sm">
+          <div className="responsive-scroll rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-[680px] w-full text-sm">
               <thead className="bg-slate-50 text-left text-slate-600">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Row</th>

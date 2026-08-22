@@ -219,7 +219,7 @@ export default function CreateId() {
           <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
             {portalLabel(user.role)}
           </p>
-          <h2 className="text-3xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold sm:text-3xl text-slate-900">
             Create ID
           </h2>
         </div>
@@ -238,7 +238,7 @@ export default function CreateId() {
           {portalLabel(user.role)}
         </p>
 
-        <h2 className="text-3xl font-bold text-slate-900">
+        <h2 className="text-2xl font-bold sm:text-3xl text-slate-900">
           Create ID
         </h2>
 

@@ -83,32 +83,35 @@ export default function SubAdminDashboard() {
   ];
 
   return (
-    <section className="space-y-5 pb-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-orange-600">
+    <section className="w-full min-w-0 space-y-3 pb-5 sm:space-y-5 sm:pb-8">
+      <div className="flex flex-col gap-3 min-[390px]:flex-row min-[390px]:items-start min-[390px]:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold text-orange-600 sm:text-sm">
             Sub-Admin Dashboard
           </p>
-          <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
+
+          <h2 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight text-slate-900 min-[360px]:text-2xl sm:mt-1 sm:text-3xl">
             Welcome, Sub-Admin
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+
+          <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
             Monitor Vendor and Supervisor activity across all brands.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm">
+
+        <div className="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 shadow-sm sm:h-auto sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-sm">
           <CalendarIcon />
           {today}
         </div>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700 sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm">
           {error}
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 min-[390px]:gap-3 sm:gap-4 xl:grid-cols-4">
         {cards.map((card) => (
           <SummaryCard
             key={card.label}
@@ -118,7 +121,7 @@ export default function SubAdminDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr_1.2fr]">
+      <div className="grid min-w-0 gap-3 sm:gap-5 xl:grid-cols-[0.85fr_1.15fr_1.2fr]">
         <DashboardPanel title="User Summary">
           <UserBreakdown
             data={dashboard.userSummary}
@@ -146,7 +149,7 @@ export default function SubAdminDashboard() {
         action={
           <Link
             to="/sub-admin/signup-requests"
-            className="rounded-lg border border-orange-200 px-3 py-1.5 text-xs font-bold text-orange-600 transition hover:bg-orange-50"
+            className="shrink-0 rounded-lg border border-orange-200 px-2.5 py-1.5 text-[10px] font-bold text-orange-600 transition hover:bg-orange-50 sm:px-3 sm:text-xs"
           >
             View All
           </Link>
@@ -174,21 +177,22 @@ function UserBreakdown({ data, loading }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-5">
+    <div className="grid min-w-0 grid-cols-[104px_minmax(0,1fr)] items-center gap-4 min-[390px]:grid-cols-[116px_minmax(0,1fr)] sm:flex sm:flex-row sm:gap-5 xl:flex-col 2xl:flex-row">
       <div
-        className="relative h-36 w-36 rounded-full"
+        className="relative h-[104px] w-[104px] shrink-0 rounded-full min-[390px]:h-[116px] min-[390px]:w-[116px] sm:h-36 sm:w-36"
         style={style}
       >
-        <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-white">
-          <strong className="text-2xl font-extrabold text-slate-900">
+        <div className="absolute inset-[21px] flex flex-col items-center justify-center rounded-full bg-white min-[390px]:inset-6 sm:inset-7">
+          <strong className="text-xl font-extrabold text-slate-900 sm:text-2xl">
             {loading ? '—' : total}
           </strong>
-          <span className="text-xs text-slate-500">
+          <span className="text-[10px] text-slate-500 sm:text-xs">
             Total
           </span>
         </div>
       </div>
-      <div className="w-full space-y-3">
+
+      <div className="min-w-0 space-y-2 sm:w-full sm:space-y-3">
         <BreakdownRow
           label="Vendors"
           value={data.vendors}
@@ -208,12 +212,12 @@ function UserBreakdown({ data, loading }) {
 
 function BreakdownRow({ label, value, dot, loading }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="flex items-center gap-2 text-slate-600">
-        <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-        {label}
+    <div className="flex min-w-0 items-center justify-between gap-2 text-[11px] sm:text-sm">
+      <span className="flex min-w-0 items-center gap-1.5 text-slate-600 sm:gap-2">
+        <span className={`h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5 ${dot}`} />
+        <span className="truncate">{label}</span>
       </span>
-      <strong className="text-slate-900">
+      <strong className="shrink-0 text-slate-900">
         {loading ? '—' : value}
       </strong>
     </div>
@@ -221,37 +225,64 @@ function BreakdownRow({ label, value, dot, loading }) {
 }
 
 function BrandSummary({ rows, loading }) {
+  if (loading) {
+    return (
+      <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
+        Loading...
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
+        No brand data yet.
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="bg-orange-50 text-left text-xs uppercase tracking-wide text-slate-600">
-            <th className="rounded-l-lg px-3 py-2.5">
-              Brand
-            </th>
-            <th className="px-3 py-2.5 text-center">
-              Vendors
-            </th>
-            <th className="px-3 py-2.5 text-center">
-              Supervisors
-            </th>
-            <th className="rounded-r-lg px-3 py-2.5 text-center">
-              Total
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {loading ? (
-            <tr>
-              <td
-                colSpan="4"
-                className="px-3 py-10 text-center text-slate-400"
-              >
-                Loading...
-              </td>
+    <>
+      <div className="space-y-2 sm:hidden">
+        {rows.map((row) => (
+          <div
+            key={row.brandName}
+            className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <strong className="min-w-0 truncate text-xs text-slate-800">
+                {row.brandName}
+              </strong>
+              <span className="shrink-0 rounded-md bg-orange-50 px-2 py-1 text-[10px] font-extrabold text-orange-600">
+                Total {row.totalUsers}
+              </span>
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+              <span>
+                Vendors <strong className="text-slate-800">{row.vendors}</strong>
+              </span>
+              <span>
+                Supervisors <strong className="text-slate-800">{row.supervisors}</strong>
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[520px] text-sm">
+          <thead>
+            <tr className="bg-orange-50 text-left text-xs uppercase tracking-wide text-slate-600">
+              <th className="rounded-l-lg px-3 py-2.5">Brand</th>
+              <th className="px-3 py-2.5 text-center">Vendors</th>
+              <th className="px-3 py-2.5 text-center">Supervisors</th>
+              <th className="rounded-r-lg px-3 py-2.5 text-center">Total</th>
             </tr>
-          ) : (
-            rows.map((row) => (
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
               <tr key={row.brandName}>
                 <td className="px-3 py-3 font-semibold text-slate-800">
                   {row.brandName}
@@ -266,59 +297,40 @@ function BrandSummary({ rows, loading }) {
                   {row.totalUsers}
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
 function DashboardPanel({ title, action, children }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-900">
+    <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm min-[390px]:p-3.5 sm:rounded-2xl sm:p-5">
+      <div className="mb-3 flex min-w-0 items-start justify-between gap-2 sm:mb-4 sm:gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-[11px] font-extrabold uppercase tracking-[0.05em] text-slate-900 sm:text-sm sm:tracking-wide">
             {title}
           </h3>
-          <div className="mt-2 h-0.5 w-8 bg-orange-500" />
+          <div className="mt-1.5 h-0.5 w-7 bg-orange-500 sm:mt-2 sm:w-8" />
         </div>
         {action}
       </div>
-      {children}
+      <div className="min-w-0">{children}</div>
     </section>
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  loading,
-  textValue = false,
-}) {
+function SummaryCard({ label, value, loading }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-            {label}
-          </p>
-          <p
-            className={`mt-1 font-extrabold text-slate-900 ${
-              textValue
-                ? 'truncate text-xl'
-                : 'text-3xl'
-            }`}
-          >
-            {loading
-              ? '—'
-              : textValue
-                ? value
-                : Number(value || 0).toLocaleString()}
-          </p>
-        </div>
-      </div>
+    <article className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-2xl sm:p-5">
+      <p className="truncate text-[9px] font-extrabold uppercase tracking-[0.04em] text-slate-500 min-[360px]:text-[10px] sm:text-xs sm:tracking-wide">
+        {label}
+      </p>
+      <p className="mt-1 text-[22px] font-extrabold leading-none text-slate-900 min-[360px]:text-2xl sm:text-3xl">
+        {loading ? '—' : Number(value || 0).toLocaleString()}
+      </p>
     </article>
   );
 }
@@ -326,7 +338,7 @@ function SummaryCard({
 function SignupTrend({ points, loading }) {
   if (loading) {
     return (
-      <div className="flex h-44 items-center justify-center text-sm text-slate-400">
+      <div className="flex h-36 items-center justify-center text-xs text-slate-400 sm:h-44 sm:text-sm">
         Loading trend...
       </div>
     );
@@ -335,8 +347,8 @@ function SignupTrend({ points, loading }) {
   const values = points.map((point) => point.count);
   const maxValue = Math.max(...values, 1);
   const width = 420;
-  const height = 155;
-  const paddingX = 14;
+  const height = 150;
+  const paddingX = 20;
   const paddingTop = 12;
   const paddingBottom = 28;
   const plotHeight = height - paddingTop - paddingBottom;
@@ -348,10 +360,7 @@ function SignupTrend({ points, loading }) {
   const chartPoints = points.map((point, index) => ({
     ...point,
     x: paddingX + index * step,
-    y:
-      paddingTop +
-      plotHeight -
-      (point.count / maxValue) * plotHeight,
+    y: paddingTop + plotHeight - (point.count / maxValue) * plotHeight,
   }));
 
   const polyline = chartPoints
@@ -359,22 +368,20 @@ function SignupTrend({ points, loading }) {
     .join(' ');
 
   const area = chartPoints.length
-    ? `${paddingX},${paddingTop + plotHeight} ${polyline} ${
-        chartPoints[chartPoints.length - 1].x
-      },${paddingTop + plotHeight}`
+    ? `${paddingX},${paddingTop + plotHeight} ${polyline} ${chartPoints[chartPoints.length - 1].x},${paddingTop + plotHeight}`
     : '';
 
   return (
-    <div>
+    <div className="min-w-0 overflow-hidden">
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-44 w-full"
+        preserveAspectRatio="xMidYMid meet"
+        className="block h-auto max-h-40 w-full sm:max-h-44"
         role="img"
         aria-label="Signup request trend"
       >
         {[0, 1, 2, 3].map((line) => {
-          const y =
-            paddingTop + (plotHeight / 3) * line;
+          const y = paddingTop + (plotHeight / 3) * line;
 
           return (
             <line
@@ -389,12 +396,7 @@ function SignupTrend({ points, loading }) {
           );
         })}
 
-        {area && (
-          <polygon
-            points={area}
-            fill="#fff7ed"
-          />
-        )}
+        {area && <polygon points={area} fill="#fff7ed" />}
 
         {polyline && (
           <polyline
@@ -409,17 +411,12 @@ function SignupTrend({ points, loading }) {
 
         {chartPoints.map((point) => (
           <g key={point.date}>
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r="4"
-              fill="#f97316"
-            />
+            <circle cx={point.x} cy={point.y} r="4" fill="#f97316" />
             <text
               x={point.x}
-              y={height - 6}
+              y={height - 7}
               textAnchor="middle"
-              fontSize="10"
+              fontSize="9"
               fill="#64748b"
             >
               {point.label}
@@ -436,43 +433,68 @@ function RecentRequests({
   loading,
   emptyMessage = 'No recent signup requests.',
 }) {
+  if (loading) {
+    return (
+      <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
+        Loading...
+      </div>
+    );
+  }
+
+  if (requests.length === 0) {
+    return (
+      <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <th className="rounded-l-lg px-3 py-2.5">
-              Name
-            </th>
-            <th className="px-3 py-2.5">Brand</th>
-            <th className="px-3 py-2.5">Role</th>
-            <th className="px-3 py-2.5">Email</th>
-            <th className="rounded-r-lg px-3 py-2.5">
-              Requested
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {loading ? (
-            <tr>
-              <td
-                colSpan="5"
-                className="px-3 py-10 text-center text-slate-400"
-              >
-                Loading...
-              </td>
+    <>
+      <div className="space-y-2 sm:hidden">
+        {requests.map((request) => (
+          <article
+            key={request.id}
+            className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-slate-800">
+                {request.userName || '—'}
+              </p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                {request.email}
+              </p>
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-slate-500">
+              <span className="truncate">
+                Brand: <strong className="text-slate-700">{request.brandName || '—'}</strong>
+              </span>
+              <span className="truncate">
+                Role: <strong className="text-slate-700">{roleLabel(request.role)}</strong>
+              </span>
+              <span className="col-span-2">
+                Requested: <strong className="text-slate-700">{formatDateTime(request.createdAt)}</strong>
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <th className="rounded-l-lg px-3 py-2.5">Name</th>
+              <th className="px-3 py-2.5">Brand</th>
+              <th className="px-3 py-2.5">Role</th>
+              <th className="px-3 py-2.5">Email</th>
+              <th className="rounded-r-lg px-3 py-2.5">Requested</th>
             </tr>
-          ) : requests.length === 0 ? (
-            <tr>
-              <td
-                colSpan="5"
-                className="px-3 py-10 text-center text-slate-400"
-              >
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            requests.map((request) => (
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {requests.map((request) => (
               <tr key={request.id}>
                 <td className="px-3 py-3 font-semibold text-slate-800">
                   {request.userName || '—'}
@@ -481,12 +503,7 @@ function RecentRequests({
                   {request.brandName || '—'}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
-                  {request.role === 'subadmin'
-                    ? 'Sub-Admin'
-                    : request.role
-                      ? request.role.charAt(0).toUpperCase() +
-                        request.role.slice(1)
-                      : '—'}
+                  {roleLabel(request.role)}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
                   {request.email}
@@ -495,18 +512,22 @@ function RecentRequests({
                   {formatDateTime(request.createdAt)}
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
+function roleLabel(role) {
+  if (role === 'subadmin') return 'Sub-Admin';
+  if (!role) return '—';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
 function formatDateTime(value) {
-  if (!value) {
-    return '—';
-  }
+  if (!value) return '—';
 
   return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
@@ -519,7 +540,7 @@ function CalendarIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-3.5 w-3.5 text-orange-500 sm:h-4 sm:w-4"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -529,23 +550,3 @@ function CalendarIcon() {
     </svg>
   );
 }
-
-
-
-
-
-function BrandIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M4 21V4l8-2 8 2v17" />
-      <path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" />
-    </svg>
-  );
-}
-

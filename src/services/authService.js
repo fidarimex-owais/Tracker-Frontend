@@ -7,6 +7,14 @@ const normalize = (error, fallback) => {
   return err;
 };
 
+const storeSessionToken = (result) => {
+  if (result?.token) {
+    setAuthToken(result.token);
+  }
+
+  return result;
+};
+
 export const signup = async (credentials) => {
   try {
     return (await api.post('/api/auth/signup', credentials)).data;
@@ -18,15 +26,20 @@ export const signup = async (credentials) => {
 export const login = async (credentials) => {
   try {
     const result = (await api.post('/api/auth/login', credentials)).data;
-
-    if (result.token) {
-      setAuthToken(result.token);
-    }
-
-    return result;
+    return storeSessionToken(result);
   } catch (error) {
     setAuthToken(null);
     throw normalize(error, 'Unable to log in');
+  }
+};
+
+export const googleLogin = async (payload) => {
+  try {
+    const result = (await api.post('/api/auth/google', payload)).data;
+    return storeSessionToken(result);
+  } catch (error) {
+    setAuthToken(null);
+    throw normalize(error, 'Unable to sign in with Google');
   }
 };
 

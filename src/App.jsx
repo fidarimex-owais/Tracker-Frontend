@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateId from './pages/admin/CreateId';
 import SignupRequests from './pages/admin/SignupRequests';
 import UserManagement from './pages/admin/UserManagement';
+import AdminQrScanner from './pages/admin/AdminQrScanner';
 
 import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
@@ -76,6 +77,11 @@ export default function App() {
               <Route
                 path="qr-generator"
                 element={<QRCodeGenerator />}
+              />
+
+              <Route
+                path="qr-scanner"
+                element={<AdminQrScanner />}
               />
 
               <Route

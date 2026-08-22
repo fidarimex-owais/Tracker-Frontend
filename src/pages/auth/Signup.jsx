@@ -10,8 +10,11 @@ import {
   Alert,
   AuthField,
   AuthShell,
+  PasswordVisibilityButton,
   inputClass,
 } from './Login';
+
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
 const BRAND_OPTIONS = [
   'Hi Banana',
@@ -33,6 +36,9 @@ const INITIAL_FORM = {
   confirmPassword: '',
 };
 
+const isValidGmail = (email) =>
+  EMAIL_RE.test(email) && email.endsWith('@gmail.com');
+
 export default function Signup() {
   const { user, signup } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,6 +52,8 @@ export default function Signup() {
 
   const [selectedRole, setSelectedRole] = useState(validInitialRole);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -69,6 +77,8 @@ export default function Signup() {
 
     setSelectedRole(role);
     setForm(INITIAL_FORM);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setFieldErrors({});
     setError('');
     setSuccess('');
@@ -100,10 +110,27 @@ export default function Signup() {
   const submit = async (event) => {
     event.preventDefault();
 
+    const email = form.email.trim().toLowerCase();
+    const errors = {};
+
     if (!selectedRole) {
-      setFieldErrors({
-        role: 'Select Vendor or Supervisor before registering',
-      });
+      errors.role = 'Select Vendor or Supervisor before registering';
+    }
+
+    if (!isValidGmail(email)) {
+      errors.email = 'Please enter a valid Gmail address.';
+    }
+
+    if (form.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+
+    if (form.password !== form.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -115,6 +142,7 @@ export default function Signup() {
     try {
       const result = await signup({
         ...form,
+        email,
         role: selectedRole,
       });
 
@@ -124,16 +152,25 @@ export default function Signup() {
       );
 
       setForm(INITIAL_FORM);
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     } catch (requestError) {
-      const errors = {};
+      const nextErrors = {};
 
       (requestError.fieldErrors || []).forEach((item) => {
         if (item.field) {
-          errors[item.field] = item.message;
+          nextErrors[item.field] = item.message;
         }
       });
 
-      setFieldErrors(errors);
+      if (
+        requestError.statusCode === 409 &&
+        requestError.message === 'This email address is already registered.'
+      ) {
+        nextErrors.email = requestError.message;
+      }
+
+      setFieldErrors(nextErrors);
       setError(requestError.message);
     } finally {
       setBusy(false);
@@ -180,11 +217,10 @@ export default function Signup() {
         {roleLabel && (
           <form
             onSubmit={submit}
+            noValidate
             className="space-y-3"
           >
-            {error && (
-              <Alert>{error}</Alert>
-            )}
+            {error && <Alert>{error}</Alert>}
 
             {success && (
               <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-5 text-green-700 sm:text-sm">
@@ -268,7 +304,7 @@ export default function Signup() {
             </div>
 
             <AuthField
-              label="Email ID"
+              label="Gmail Address"
               error={fieldErrors.email}
             >
               <div className="relative">
@@ -277,10 +313,11 @@ export default function Signup() {
                   required
                   type="email"
                   name="email"
+                  inputMode="email"
                   autoComplete="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
+                  placeholder="name@gmail.com"
                   className={inputClass(fieldErrors.email)}
                 />
               </div>
@@ -295,14 +332,18 @@ export default function Signup() {
                   <FieldIcon type="lock" />
                   <input
                     required
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     name="password"
                     minLength="8"
                     autoComplete="new-password"
                     value={form.password}
                     onChange={handleChange}
                     placeholder="Enter password"
-                    className={inputClass(fieldErrors.password)}
+                    className={inputClass(fieldErrors.password, false, true)}
+                  />
+                  <PasswordVisibilityButton
+                    visible={showPassword}
+                    onClick={() => setShowPassword((current) => !current)}
                   />
                 </div>
               </AuthField>
@@ -315,14 +356,20 @@ export default function Signup() {
                   <FieldIcon type="lock" />
                   <input
                     required
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword"
                     minLength="8"
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm password"
-                    className={inputClass(fieldErrors.confirmPassword)}
+                    className={inputClass(fieldErrors.confirmPassword, false, true)}
+                  />
+                  <PasswordVisibilityButton
+                    visible={showConfirmPassword}
+                    onClick={() =>
+                      setShowConfirmPassword((current) => !current)
+                    }
                   />
                 </div>
               </AuthField>
