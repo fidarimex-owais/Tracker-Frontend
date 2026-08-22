@@ -80,6 +80,7 @@ export default function AdminBarcodeScanner() {
 
   const sheetSaved = Boolean(sheet?.savedAt);
   const canEditSavedSheet = ['admin', 'subadmin'].includes(user.role);
+  const canDownloadCompletedSheet = ['admin', 'subadmin'].includes(user.role);
   const canViewRecoverySheet = ['admin', 'subadmin', 'vendor'].includes(user.role);
   const roleBasePath = {
     admin: '/admin',
@@ -662,6 +663,116 @@ export default function AdminBarcodeScanner() {
     }
   };
 
+  const downloadCompletedSheet = () => {
+    if (!sheet || !allRowsCompleted || !canDownloadCompletedSheet) {
+      return;
+    }
+
+    const rows = [...(sheet.rows || [])].sort(
+      (left, right) => left.rowNumber - right.rowNumber
+    );
+
+    const csvRows = [
+      ['Raw Recovery Sheet - Completed Barcode Data'],
+      ['Packaging Date', sheet.packagingDate || setup.packagingDate || ''],
+      ['Vendor Name', sheet.vendorName || setup.vendorName || ''],
+      ['Line Number', sheet.lineNumber || setup.lineNumber || ''],
+      ['Status', sheet.savedAt ? 'Saved' : 'All Rows Completed'],
+      ['Saved At', sheet.savedAt ? formatDateTime(sheet.savedAt) : 'Not saved yet'],
+      [],
+      [
+        'Row',
+        'Row Status',
+        '4-Hand Qty',
+        '5-Hand Qty',
+        '6-Hand Qty',
+        '8-Hand Qty',
+        'Total Barcodes',
+        'Started At',
+        'Completed At',
+      ],
+      ...rows.map((row) => {
+        const counts = row.barcodes.reduce(
+          (accumulator, barcode) => {
+            accumulator[barcode.handNumber] =
+              (accumulator[barcode.handNumber] || 0) + 1;
+            return accumulator;
+          },
+          { 4: 0, 5: 0, 6: 0, 8: 0 }
+        );
+
+        return [
+          `Row ${row.rowNumber}`,
+          row.status,
+          counts[4],
+          counts[5],
+          counts[6],
+          counts[8],
+          row.barcodes.length,
+          formatDateTime(row.startedAt),
+          formatDateTime(row.completedAt),
+        ];
+      }),
+      [],
+      [
+        'Row',
+        'Barcode ID',
+        'Hand',
+        'Category',
+        'Scanned At',
+      ],
+      ...rows.flatMap((row) =>
+        row.barcodes.map((barcode) => [
+          `Row ${row.rowNumber}`,
+          barcode.barcodeId,
+          barcode.handNumber,
+          barcode.category,
+          formatDateTime(barcode.scannedAt),
+        ])
+      ),
+    ];
+
+    const escapeCsvValue = (value) => {
+      const stringValue = String(value ?? '');
+
+      if (
+        stringValue.includes(',') ||
+        stringValue.includes('"') ||
+        stringValue.includes('\n')
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+
+      return stringValue;
+    };
+
+    const csv = csvRows
+      .map((row) => row.map(escapeCsvValue).join(','))
+      .join('\r\n');
+
+    const blob = new Blob(['\uFEFF', csv], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeVendor = String(
+      sheet.vendorName || setup.vendorName || 'vendor'
+    )
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-');
+
+    anchor.href = url;
+    anchor.download =
+      `raw-recovery-${sheet.packagingDate || setup.packagingDate}` +
+      `-${safeVendor}-line-${sheet.lineNumber || setup.lineNumber}.csv`;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const editSavedRecovery = async () => {
     if (!sheet?.savedAt || !canEditSavedSheet) return;
 
@@ -856,6 +967,8 @@ export default function AdminBarcodeScanner() {
             editing={editingSheet}
             canEditSavedSheet={canEditSavedSheet}
             canViewRecoverySheet={canViewRecoverySheet}
+            canDownloadCompletedSheet={canDownloadCompletedSheet}
+            onDownload={downloadCompletedSheet}
             recoverySheetPath={recoverySheetPath}
           />
         </>
@@ -1216,6 +1329,8 @@ function FinalSavePanel({
   editing,
   canEditSavedSheet,
   canViewRecoverySheet,
+  canDownloadCompletedSheet,
+  onDownload,
   recoverySheetPath,
 }) {
   const completedCount = rows.filter(
@@ -1244,8 +1359,21 @@ function FinalSavePanel({
             </p>
           </div>
 
-          {(canEditSavedSheet || canViewRecoverySheet) && (
-            <div className="flex shrink-0 flex-col gap-2 min-[390px]:flex-row">
+          {(canEditSavedSheet ||
+            canViewRecoverySheet ||
+            canDownloadCompletedSheet) && (
+            <div className="flex shrink-0 flex-col gap-2 min-[390px]:flex-row min-[390px]:flex-wrap">
+              {canDownloadCompletedSheet && (
+                <button
+                  type="button"
+                  onClick={onDownload}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-orange-300 bg-white px-4 text-xs font-extrabold text-orange-700 transition hover:bg-orange-50 sm:text-sm"
+                >
+                  <DownloadIcon />
+                  Download CSV
+                </button>
+              )}
+
               {canEditSavedSheet && (
                 <button
                   type="button"
@@ -1304,14 +1432,27 @@ function FinalSavePanel({
         </div>
 
         {allRowsCompleted && (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-orange-500 px-5 text-xs font-extrabold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+          <div className="flex shrink-0 flex-col gap-2 min-[390px]:flex-row">
+            {canDownloadCompletedSheet && (
+              <button
+                type="button"
+                onClick={onDownload}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-orange-300 bg-white px-4 text-xs font-extrabold text-orange-700 transition hover:bg-orange-50 sm:text-sm"
+              >
+                <DownloadIcon />
+                Download CSV
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-orange-500 px-5 text-xs font-extrabold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         )}
       </div>
     </section>
@@ -1502,6 +1643,25 @@ function formatDateTime(value) {
     minute: '2-digit',
     second: '2-digit',
   }).format(date);
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
 }
 
 function BarcodeIcon() {

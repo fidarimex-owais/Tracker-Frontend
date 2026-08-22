@@ -29,6 +29,7 @@ const formatPercentage = (value) => {
 export default function RecoverySheet() {
   const { user } = useAuth();
   const vendorTodayOnly = user.role === 'vendor';
+  const canDownload = ['admin', 'subadmin'].includes(user.role);
   const [options, setOptions] = useState([]);
   const [packagingDate, setPackagingDate] = useState('');
   const [vendorName, setVendorName] = useState('');
@@ -150,6 +151,78 @@ export default function RecoverySheet() {
     }
   };
 
+  const downloadRecoverySheet = () => {
+    if (!sheet || !canDownload) {
+      return;
+    }
+
+    const rows = [...(sheet.rows || [])].sort(
+      (a, b) => a.rowNumber - b.rowNumber
+    );
+
+    const csvRows = [
+      ['Recovery Sheet'],
+      ['Packaging Date', formatDate(sheet.packagingDate)],
+      ['Vendor Name', sheet.vendorName || ''],
+      ['Line Number', `Line ${sheet.lineNumber}`],
+      [],
+      [
+        'Row',
+        '4-Hand',
+        '5-Hand',
+        '6-Hand',
+        '8-Hand',
+        'Total',
+        'Recovery Percentage',
+      ],
+      ...rows.map((row) => [
+        `Row ${row.rowNumber}`,
+        row.fourHand ?? 0,
+        row.fiveHand ?? 0,
+        row.sixHand ?? 0,
+        row.eightHand ?? 0,
+        row.total ?? 0,
+        formatPercentage(row.recoveryPercentage),
+      ]),
+    ];
+
+    const escapeCsvValue = (value) => {
+      const stringValue = String(value ?? '');
+
+      if (
+        stringValue.includes(',') ||
+        stringValue.includes('"') ||
+        stringValue.includes('\n')
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+
+      return stringValue;
+    };
+
+    const csv = csvRows
+      .map((row) => row.map(escapeCsvValue).join(','))
+      .join('\r\n');
+
+    const blob = new Blob(['\uFEFF', csv], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeVendor = String(sheet.vendorName || 'vendor')
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-');
+
+    anchor.href = url;
+    anchor.download = `recovery-sheet-${sheet.packagingDate}-${safeVendor}-line-${sheet.lineNumber}.csv`;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="space-y-6">
       <div>
@@ -257,62 +330,123 @@ export default function RecoverySheet() {
 
       {!loadingSheet && sheet && (
         <div className="space-y-4">
-          <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
-            <Info label="Packaging Date" value={formatDate(sheet.packagingDate)} />
-            <Info label="Vendor Name" value={sheet.vendorName} />
-            <Info label="Line Number" value={`Line ${sheet.lineNumber}`} />
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-3">
+                <Info
+                  label="Packaging Date"
+                  value={formatDate(sheet.packagingDate)}
+                />
+                <Info label="Vendor Name" value={sheet.vendorName} />
+                <Info label="Line Number" value={`Line ${sheet.lineNumber}`} />
+              </div>
+
+              {canDownload && (
+                <button
+                  type="button"
+                  onClick={downloadRecoverySheet}
+                  className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 text-xs font-bold text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200 sm:w-auto sm:text-sm"
+                >
+                  <DownloadIcon />
+                  Download CSV
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="responsive-scroll rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-[680px] w-full text-sm">
-              <thead className="bg-slate-50 text-left text-slate-600">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Row</th>
-                  <th className="px-4 py-3 text-center font-semibold">4-Hand</th>
-                  <th className="px-4 py-3 text-center font-semibold">5-Hand</th>
-                  <th className="px-4 py-3 text-center font-semibold">6-Hand</th>
-                  <th className="px-4 py-3 text-center font-semibold">8-Hand</th>
-                  <th className="px-4 py-3 text-center font-semibold">Total</th>
-                  <th className="px-4 py-3 text-center font-semibold">
-                    Recovery Percentage
-                  </th>
-                </tr>
-              </thead>
+          <div>
+            <p className="mb-2 text-[11px] font-medium text-slate-400 sm:hidden">
+              Swipe left/right to view all Recovery Sheet columns.
+            </p>
 
-              <tbody className="divide-y divide-slate-100">
-                {[...(sheet.rows || [])]
-                  .sort((a, b) => a.rowNumber - b.rowNumber)
-                  .map((row) => (
-                    <tr key={row.rowNumber}>
-                      <td className="px-4 py-3 font-semibold text-slate-800">
-                        Row {row.rowNumber}
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-700">
-                        {row.fourHand}
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-700">
-                        {row.fiveHand}
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-700">
-                        {row.sixHand}
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-700">
-                        {row.eightHand}
-                      </td>
-                      <td className="px-4 py-3 text-center font-semibold text-slate-900">
-                        {row.total}
-                      </td>
-                      <td className="px-4 py-3 text-center font-semibold text-orange-600">
-                        {formatPercentage(row.recoveryPercentage)}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div
+              className="w-full overflow-x-scroll rounded-xl border border-slate-200 bg-white shadow-sm"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                scrollbarGutter: 'stable',
+              }}
+            >
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-slate-50 text-left text-slate-600">
+                  <tr>
+                    <th className="whitespace-nowrap px-4 py-3 font-semibold">
+                      Row
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      4-Hand
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      5-Hand
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      6-Hand
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      8-Hand
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      Total
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-center font-semibold">
+                      Recovery Percentage
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {[...(sheet.rows || [])]
+                    .sort((a, b) => a.rowNumber - b.rowNumber)
+                    .map((row) => (
+                      <tr key={row.rowNumber}>
+                        <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-800">
+                          Row {row.rowNumber}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-700">
+                          {row.fourHand}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-700">
+                          {row.fiveHand}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-700">
+                          {row.sixHand}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-700">
+                          {row.eightHand}
+                        </td>
+                        <td className="px-4 py-3 text-center font-semibold text-slate-900">
+                          {row.total}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-center font-semibold text-orange-600">
+                          {formatPercentage(row.recoveryPercentage)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
     </section>
+  );
+}
+
+
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
   );
 }
 
