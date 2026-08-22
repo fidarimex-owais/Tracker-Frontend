@@ -1,6 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
+const authorize = require('../../middleware/role.middleware');
 const controller = require('./scanning.controller');
 const {
   validateRecordId,
@@ -24,6 +25,7 @@ const router = express.Router();
 router.post(
   '/qr',
   authMiddleware,
+  authorize('admin', 'subadmin'),
   validateRecordId,
   asyncHandler(controller.scanQr)
 );

@@ -105,10 +105,10 @@ const validateSheetId = (req, res, next) => {
 const validateRowNumber = (req, res, next) => {
   const rowNumber = parseNaturalNumber(req.params.rowNumber);
 
-  if (!rowNumber || rowNumber > 11) {
+  if (!rowNumber) {
     return res.status(400).json({
       success: false,
-      message: 'rowNumber must be between 1 and 11',
+      message: 'rowNumber must be a natural number (1, 2, 3, ...)',
     });
   }
 

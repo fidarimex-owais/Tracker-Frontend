@@ -61,6 +61,75 @@ const completeRow = async (req, res) => {
   });
 };
 
+const saveSheet = async (req, res) => {
+  const data = await service.saveCompletedSheet(req.params.id);
+
+  res.json({
+    success: true,
+    message: data.recoveryCreated
+      ? 'Raw Recovery Sheet saved and Recovery Sheet generated successfully'
+      : 'Raw Recovery Sheet saved. Recovery Sheet was already generated',
+    data,
+  });
+};
+
+
+const editSheet = async (req, res) => {
+  const data = await service.editSavedSheet(req.params.id);
+
+  res.json({
+    success: true,
+    message: data.recoveryDeleted
+      ? 'Raw Recovery Sheet unlocked for editing. Existing Recovery Sheet removed until the sheet is saved again'
+      : 'Raw Recovery Sheet unlocked for editing',
+    data,
+  });
+};
+
+const reopenRow = async (req, res) => {
+  const data = await service.reopenRow(req.params.id, req.rowNumber);
+
+  res.json({
+    success: true,
+    message: `Row ${req.rowNumber} reopened for editing`,
+    data,
+  });
+};
+
+const removeBarcode = async (req, res) => {
+  const data = await service.removeBarcode(
+    req.params.id,
+    req.rowNumber,
+    req.params.barcodeId
+  );
+
+  res.json({
+    success: true,
+    message: `${req.params.barcodeId} removed from Row ${req.rowNumber}`,
+    data,
+  });
+};
+
+const addRow = async (req, res) => {
+  const data = await service.addRow(req.params.id);
+
+  res.status(201).json({
+    success: true,
+    message: `Row ${data.addedRowNumber} added`,
+    data,
+  });
+};
+
+const removeRow = async (req, res) => {
+  const data = await service.removeRow(req.params.id, req.rowNumber);
+
+  res.json({
+    success: true,
+    message: `Row ${data.removedRowNumber} removed`,
+    data,
+  });
+};
+
 const listVendors = async (req, res) => {
   const vendors = await service.listVendors(req.packagingDate);
 
@@ -89,6 +158,12 @@ module.exports = {
   getRow,
   scanBarcode,
   completeRow,
+  saveSheet,
+  editSheet,
+  reopenRow,
+  removeBarcode,
+  addRow,
+  removeRow,
   listVendors,
   listLines,
 };

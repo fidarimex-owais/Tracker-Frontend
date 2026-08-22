@@ -91,6 +91,7 @@ const signupRequestSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
+      unique: true,
       index: true,
     },
 
@@ -270,6 +271,25 @@ const canActorReviewRequest = (actor, request) => {
   );
 };
 
+
+const findSignupRequestByEmail = async (email) => {
+  const normalizedEmail = String(email || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const SignupRequest = getSignupRequestModel();
+
+  return SignupRequest.findOne({
+    email: normalizedEmail,
+  }).sort({
+    createdAt: -1,
+  });
+};
+
 const findPendingSignupRequestByEmail = async (email) => {
   const normalizedEmail = String(email || '')
     .trim()
@@ -351,6 +371,7 @@ module.exports = {
   getRequestBrand,
   buildReviewFilterForActor,
   canActorReviewRequest,
+  findSignupRequestByEmail,
   findPendingSignupRequestByEmail,
   findSignupRequestById,
   listPendingSignupRequestsForActor,

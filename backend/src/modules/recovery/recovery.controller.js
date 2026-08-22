@@ -1,7 +1,7 @@
 const service = require('./recovery.service');
 
 const getGenerationStatus = async (req, res) => {
-  const data = await service.getGenerationStatus(req.params.rawSheetId);
+  const data = await service.getGenerationStatus(req.params.rawSheetId, req.user);
 
   res.json({
     success: true,
@@ -10,7 +10,7 @@ const getGenerationStatus = async (req, res) => {
 };
 
 const generateRecoverySheet = async (req, res) => {
-  const result = await service.generateRecoverySheet(req.params.rawSheetId);
+  const result = await service.generateRecoverySheet(req.params.rawSheetId, req.user);
 
   res.status(result.created ? 201 : 200).json({
     success: true,
@@ -22,7 +22,7 @@ const generateRecoverySheet = async (req, res) => {
 };
 
 const getRecoverySheet = async (req, res) => {
-  const sheet = await service.getRecoverySheetById(req.params.id);
+  const sheet = await service.getRecoverySheetById(req.params.id, req.user);
 
   res.json({
     success: true,
@@ -31,7 +31,7 @@ const getRecoverySheet = async (req, res) => {
 };
 
 const getRecoverySheetByRawId = async (req, res) => {
-  const sheet = await service.getRecoverySheetByRawId(req.params.rawSheetId);
+  const sheet = await service.getRecoverySheetByRawId(req.params.rawSheetId, req.user);
 
   res.json({
     success: true,
@@ -40,7 +40,7 @@ const getRecoverySheetByRawId = async (req, res) => {
 };
 
 const listRecoverySheetOptions = async (req, res) => {
-  const options = await service.listRecoverySheetOptions();
+  const options = await service.listRecoverySheetOptions(req.user);
 
   res.json({
     success: true,
@@ -49,7 +49,7 @@ const listRecoverySheetOptions = async (req, res) => {
 };
 
 const findRecoverySheet = async (req, res) => {
-  const sheet = await service.findRecoverySheet(req.recoveryLookup);
+  const sheet = await service.findRecoverySheet(req.recoveryLookup, req.user);
 
   res.json({
     success: true,

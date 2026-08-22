@@ -1,15 +1,16 @@
 const mongoose = require('mongoose');
 const { getRecoveryDb } = require('../../config/db');
 
-const ROW_COUNT = 11;
-
 const recoveryRowSchema = new mongoose.Schema(
   {
     rowNumber: {
       type: Number,
       required: true,
       min: 1,
-      max: ROW_COUNT,
+      validate: {
+        validator: Number.isInteger,
+        message: 'rowNumber must be a natural number (positive integer)',
+      },
     },
     fourHand: {
       type: Number,
@@ -88,19 +89,19 @@ const recoverySheetSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator(rows) {
-          if (!Array.isArray(rows) || rows.length !== ROW_COUNT) {
+          if (!Array.isArray(rows) || rows.length < 1) {
             return false;
           }
 
-          const rowNumbers = rows
-            .map((row) => row.rowNumber)
-            .sort((a, b) => a - b);
+          const rowNumbers = rows.map((row) => row.rowNumber);
 
-          return rowNumbers.every(
-            (rowNumber, index) => rowNumber === index + 1
+          return (
+            rowNumbers.every(
+              (rowNumber) => Number.isInteger(rowNumber) && rowNumber > 0
+            ) && new Set(rowNumbers).size === rowNumbers.length
           );
         },
-        message: 'A Recovery Sheet must contain exactly Rows 1 through 11',
+        message: 'A Recovery Sheet must contain unique positive row numbers',
       },
     },
     sourceRawUpdatedAt: {
@@ -148,6 +149,5 @@ const getRecoverySheetModel = () => {
 };
 
 module.exports = {
-  ROW_COUNT,
   getRecoverySheetModel,
 };

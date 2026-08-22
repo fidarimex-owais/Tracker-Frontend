@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { getRawRecoveryDb } = require('../../config/db');
 
-const ROW_COUNT = 11;
+const DEFAULT_ROW_COUNT = 11;
 const HAND_VALUES = [4, 5, 6, 8];
 const ROW_STATUSES = ['Not Started', 'In Progress', 'Completed'];
 
@@ -36,7 +36,10 @@ const recoveryRowSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      max: ROW_COUNT,
+      validate: {
+        validator: Number.isInteger,
+        message: 'rowNumber must be a natural number (positive integer)',
+      },
     },
     status: {
       type: String,
@@ -60,14 +63,32 @@ const recoveryRowSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const buildInitialRows = () =>
-  Array.from({ length: ROW_COUNT }, (_, index) => ({
+const buildInitialRows = (count = DEFAULT_ROW_COUNT) =>
+  Array.from({ length: count }, (_, index) => ({
     rowNumber: index + 1,
     status: 'Not Started',
     barcodes: [],
     startedAt: null,
     completedAt: null,
   }));
+
+const rowsAreValid = (rows) => {
+  if (!Array.isArray(rows) || rows.length < 1) {
+    return false;
+  }
+
+  const numbers = rows.map((row) => row.rowNumber);
+
+  if (
+    numbers.some(
+      (rowNumber) => !Number.isInteger(rowNumber) || rowNumber < 1
+    )
+  ) {
+    return false;
+  }
+
+  return new Set(numbers).size === numbers.length;
+};
 
 const rawRecoverySheetSchema = new mongoose.Schema(
   {
@@ -96,18 +117,16 @@ const rawRecoverySheetSchema = new mongoose.Schema(
     },
     rows: {
       type: [recoveryRowSchema],
-      default: buildInitialRows,
+      default: () => buildInitialRows(),
       validate: {
-        validator(rows) {
-          if (!Array.isArray(rows) || rows.length !== ROW_COUNT) {
-            return false;
-          }
-
-          const rowNumbers = rows.map((row) => row.rowNumber).sort((a, b) => a - b);
-          return rowNumbers.every((rowNumber, index) => rowNumber === index + 1);
-        },
-        message: 'A Raw Recovery Sheet must contain exactly Rows 1 through 11',
+        validator: rowsAreValid,
+        message: 'A Raw Recovery Sheet must contain unique positive row numbers',
       },
+    },
+    savedAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
   },
   {
@@ -145,7 +164,7 @@ const getRawRecoverySheetModel = () => {
 };
 
 module.exports = {
-  ROW_COUNT,
+  DEFAULT_ROW_COUNT,
   HAND_VALUES,
   ROW_STATUSES,
   buildInitialRows,

@@ -21,29 +21,31 @@ const signup = async (req, res) => {
   });
 };
 
-const login = async (req, res) => {
-  const user = await authService.login(req.body);
+const sendAuthenticatedResponse = (res, user, message) => {
   const token = authService.signToken(user);
 
-  res.cookie(
-    'auth_token',
-    token,
-    cookieOptions()
-  );
+  res.cookie('auth_token', token, cookieOptions());
 
   res.json({
     success: true,
-    message: 'Logged in',
+    message,
     user,
     token,
   });
 };
 
+const login = async (req, res) => {
+  const user = await authService.login(req.body);
+  return sendAuthenticatedResponse(res, user, 'Logged in');
+};
+
+const googleLogin = async (req, res) => {
+  const user = await authService.googleLogin(req.body);
+  return sendAuthenticatedResponse(res, user, 'Signed in with Google');
+};
+
 const logout = async (req, res) => {
-  res.clearCookie(
-    'auth_token',
-    cookieOptions()
-  );
+  res.clearCookie('auth_token', cookieOptions());
 
   res.json({
     success: true,
@@ -61,6 +63,7 @@ const me = async (req, res) => {
 module.exports = {
   signup,
   login,
+  googleLogin,
   logout,
   me,
 };

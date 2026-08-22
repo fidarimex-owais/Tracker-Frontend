@@ -1,4 +1,4 @@
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
 const BRAND_OPTIONS = [
@@ -18,6 +18,15 @@ const PUBLIC_SIGNUP_ROLE_OPTIONS = [
   'vendor',
   'supervisor',
 ];
+
+const GOOGLE_LOGIN_ROLE_OPTIONS = [
+  'vendor',
+  'supervisor',
+];
+
+const isValidEmail = (email) => EMAIL_RE.test(email);
+const isValidGmail = (email) =>
+  isValidEmail(email) && email.endsWith('@gmail.com');
 
 const validateCredentials = (req, res, next) => {
   const role =
@@ -44,10 +53,10 @@ const validateCredentials = (req, res, next) => {
     });
   }
 
-  if (!EMAIL_RE.test(email)) {
+  if (!isValidEmail(email)) {
     errors.push({
       field: 'email',
-      message: 'Enter a valid email address',
+      message: 'Please enter a valid email address.',
     });
   }
 
@@ -70,6 +79,49 @@ const validateCredentials = (req, res, next) => {
     role,
     email,
     password,
+  };
+
+  return next();
+};
+
+const validateGoogleCredentials = (req, res, next) => {
+  const role =
+    typeof req.body?.role === 'string'
+      ? req.body.role.trim().toLowerCase()
+      : '';
+
+  const credential =
+    typeof req.body?.credential === 'string'
+      ? req.body.credential.trim()
+      : '';
+
+  const errors = [];
+
+  if (!GOOGLE_LOGIN_ROLE_OPTIONS.includes(role)) {
+    errors.push({
+      field: 'role',
+      message: 'Google Sign-In is available only for Vendor or Supervisor',
+    });
+  }
+
+  if (credential.length < 20) {
+    errors.push({
+      field: 'google',
+      message: 'Google identity credential is required',
+    });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors,
+    });
+  }
+
+  req.body = {
+    role,
+    credential,
   };
 
   return next();
@@ -145,10 +197,10 @@ const validateSignupRequest = (req, res, next) => {
     });
   }
 
-  if (!EMAIL_RE.test(email)) {
+  if (!isValidGmail(email)) {
     errors.push({
       field: 'email',
-      message: 'Enter a valid email address',
+      message: 'Please enter a valid Gmail address.',
     });
   }
 
@@ -191,6 +243,10 @@ module.exports = {
   BRAND_OPTIONS,
   LOGIN_ROLE_OPTIONS,
   PUBLIC_SIGNUP_ROLE_OPTIONS,
+  GOOGLE_LOGIN_ROLE_OPTIONS,
+  isValidEmail,
+  isValidGmail,
   validateCredentials,
+  validateGoogleCredentials,
   validateSignupRequest,
 };

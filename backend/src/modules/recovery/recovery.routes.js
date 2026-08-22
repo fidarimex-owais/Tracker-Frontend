@@ -1,6 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
+const authorize = require('../../middleware/role.middleware');
 const controller = require('./recovery.controller');
 const {
   validateRecoverySheetId,
@@ -10,9 +11,12 @@ const {
 
 const router = express.Router();
 
-// Recovery Sheet viewing is available to every authenticated role:
-// Admin, Sub-Admin, Vendor, and Supervisor.
-router.use(authMiddleware);
+// Recovery Sheet access: Admin, Sub-Admin and Vendor only.
+// Vendor date filtering is additionally enforced in recovery.service.js.
+router.use(
+  authMiddleware,
+  authorize('admin', 'subadmin', 'vendor')
+);
 
 router.get(
   '/options',

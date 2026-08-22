@@ -8,6 +8,7 @@ const {
 
 const {
   validateCredentials,
+  validateGoogleCredentials,
   validateSignupRequest,
 } = require('./auth.validation');
 
@@ -30,9 +31,13 @@ router.post(
 );
 
 router.post(
-  '/logout',
-  controller.logout
+  '/google',
+  loginRateLimiter,
+  validateGoogleCredentials,
+  asyncHandler(controller.googleLogin)
 );
+
+router.post('/logout', controller.logout);
 
 router.get(
   '/me',

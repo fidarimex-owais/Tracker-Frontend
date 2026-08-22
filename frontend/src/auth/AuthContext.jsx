@@ -39,9 +39,13 @@ export function AuthProvider({ children }) {
 
       async login(credentials) {
         const result = await authService.login(credentials);
-
         setUser(result.user);
+        return result.user;
+      },
 
+      async googleLogin(payload) {
+        const result = await authService.googleLogin(payload);
+        setUser(result.user);
         return result.user;
       },
 
@@ -54,8 +58,6 @@ export function AuthProvider({ children }) {
           await authService.logout();
         } finally {
           setUser(null);
-
-          // Always return to the public landing page after logout.
           window.location.replace('/');
         }
       },

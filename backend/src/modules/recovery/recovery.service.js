@@ -1,10 +1,40 @@
 const {
   getRecoverySheetModel,
-  ROW_COUNT,
 } = require('./recovery.model');
 const {
   getRawRecoverySheetModel,
 } = require('../rawRecovery/rawRecovery.model');
+
+const BUSINESS_TIME_ZONE =
+  process.env.BUSINESS_TIME_ZONE || 'Asia/Kolkata';
+
+const getBusinessDate = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const isVendor = (actor) => actor?.role === 'vendor';
+
+const assertVendorPackagingDateAccess = (actor, packagingDate) => {
+  if (isVendor(actor) && packagingDate !== getBusinessDate()) {
+    throw createHttpError(
+      403,
+      "Vendors can access only today's Recovery Sheet"
+    );
+  }
+};
 
 const roundToTwoDecimals = (value) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
@@ -56,8 +86,9 @@ const getIncompleteRows = (rawSheet) =>
     .filter((row) => row.status !== 'Completed')
     .map((row) => row.rowNumber);
 
-const getGenerationStatus = async (rawSheetId) => {
+const getGenerationStatus = async (rawSheetId, actor = null) => {
   const rawSheet = await getRawSheetById(rawSheetId);
+  assertVendorPackagingDateAccess(actor, rawSheet.packagingDate);
   const incompleteRows = getIncompleteRows(rawSheet);
   const RecoverySheet = getRecoverySheetModel();
   const existing = await RecoverySheet.findOne({
@@ -68,31 +99,41 @@ const getGenerationStatus = async (rawSheetId) => {
 
   return {
     rawRecoverySheetId: rawSheet._id,
-    totalRows: ROW_COUNT,
-    completedRows: ROW_COUNT - incompleteRows.length,
+    totalRows: rawSheet.rows.length,
+    completedRows: rawSheet.rows.length - incompleteRows.length,
     incompleteRows,
-    canGenerate: incompleteRows.length === 0,
+    isSaved: Boolean(rawSheet.savedAt),
+    savedAt: rawSheet.savedAt || null,
+    canGenerate: Boolean(rawSheet.savedAt) && incompleteRows.length === 0,
     alreadyGenerated: Boolean(existing),
     recoverySheetId: existing?._id || null,
   };
 };
 
-const generateRecoverySheet = async (rawSheetId) => {
+const generateRecoverySheet = async (rawSheetId, actor = null) => {
   const rawSheet = await getRawSheetById(rawSheetId);
+  assertVendorPackagingDateAccess(actor, rawSheet.packagingDate);
 
-  if (!Array.isArray(rawSheet.rows) || rawSheet.rows.length !== ROW_COUNT) {
+  if (!Array.isArray(rawSheet.rows) || rawSheet.rows.length < 1) {
     throw createHttpError(
       409,
-      'Raw Recovery Sheet must contain exactly 11 rows before generation'
+      'Raw Recovery Sheet must contain at least one row before generation'
     );
   }
 
   const incompleteRows = getIncompleteRows(rawSheet);
 
+  if (!rawSheet.savedAt) {
+    throw createHttpError(
+      409,
+      'Save the completed Raw Recovery Sheet before generating a Recovery Sheet'
+    );
+  }
+
   if (incompleteRows.length > 0) {
     throw createHttpError(
       409,
-      `Recovery Sheet cannot be generated until all 11 rows are Completed. Incomplete rows: ${incompleteRows.join(', ')}`
+      `Recovery Sheet cannot be generated until all rows are Completed. Incomplete rows: ${incompleteRows.join(', ')}`
     );
   }
 
@@ -128,7 +169,7 @@ const generateRecoverySheet = async (rawSheetId) => {
   };
 };
 
-const getRecoverySheetById = async (id) => {
+const getRecoverySheetById = async (id, actor = null) => {
   const RecoverySheet = getRecoverySheetModel();
   const sheet = await RecoverySheet.findById(id);
 
@@ -136,10 +177,12 @@ const getRecoverySheetById = async (id) => {
     throw createHttpError(404, 'Recovery Sheet not found');
   }
 
+  assertVendorPackagingDateAccess(actor, sheet.packagingDate);
+
   return sheet;
 };
 
-const getRecoverySheetByRawId = async (rawSheetId) => {
+const getRecoverySheetByRawId = async (rawSheetId, actor = null) => {
   const RecoverySheet = getRecoverySheetModel();
   const sheet = await RecoverySheet.findOne({
     rawRecoverySheetId: rawSheetId,
@@ -152,13 +195,19 @@ const getRecoverySheetByRawId = async (rawSheetId) => {
     );
   }
 
+  assertVendorPackagingDateAccess(actor, sheet.packagingDate);
+
   return sheet;
 };
 
-const listRecoverySheetOptions = async () => {
+const listRecoverySheetOptions = async (actor = null) => {
   const RecoverySheet = getRecoverySheetModel();
 
-  const sheets = await RecoverySheet.find({})
+  const query = isVendor(actor)
+    ? { packagingDate: getBusinessDate() }
+    : {};
+
+  const sheets = await RecoverySheet.find(query)
     .select({
       packagingDate: 1,
       vendorName: 1,
@@ -185,7 +234,9 @@ const findRecoverySheet = async ({
   packagingDate,
   vendorName,
   lineNumber,
-}) => {
+}, actor = null) => {
+  assertVendorPackagingDateAccess(actor, packagingDate);
+
   const RecoverySheet = getRecoverySheetModel();
 
   const sheet = await RecoverySheet.findOne({
@@ -211,6 +262,7 @@ const createHttpError = (statusCode, message) => {
 };
 
 module.exports = {
+  getBusinessDate,
   calculateRecoveryRow,
   getGenerationStatus,
   generateRecoverySheet,

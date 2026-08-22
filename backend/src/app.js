@@ -11,8 +11,30 @@ const app = express();
 // Render/Railway and similar hosts sit behind a reverse proxy.
 // Trust the first proxy so req.ip reflects the real client IP for rate limiting.
 app.set('trust proxy', 1);
-const allowedOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+const allowedOrigins = (
+  process.env.FRONTEND_ORIGIN || 'http://localhost:5173'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow requests without an Origin header (Postman/Thunder/etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

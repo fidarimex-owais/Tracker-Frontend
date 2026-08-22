@@ -1,4 +1,10 @@
-import { useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Link,
   Navigate,
@@ -9,6 +15,8 @@ import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
 import logo from '../../assets/fidar-imex-logo.png';
 import fruitHero from '../../assets/fidar-fruit-hero.jpg';
+
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
@@ -22,8 +30,40 @@ const SIGNUP_ROLES = new Set([
   'supervisor',
 ]);
 
+let googleScriptPromise;
+
+const loadGoogleIdentityScript = () => {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  if (!googleScriptPromise) {
+    googleScriptPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  return googleScriptPromise;
+};
+
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user, login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -42,6 +82,7 @@ export default function Login() {
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -55,18 +96,15 @@ export default function Login() {
     );
   }
 
-  const selectedRoleLabel =
-    ROLE_OPTIONS.find(
-      (option) => option.value === selectedRole
-    )?.label || '';
-
   const signupAvailable = SIGNUP_ROLES.has(selectedRole);
+  const googleLoginAvailable = SIGNUP_ROLES.has(selectedRole);
 
   const handleRoleChange = (event) => {
     const role = event.target.value;
 
     setSelectedRole(role);
     setForm({ email: '', password: '' });
+    setShowPassword(false);
     setFieldErrors({});
     setError('');
 
@@ -96,10 +134,19 @@ export default function Login() {
   const submit = async (event) => {
     event.preventDefault();
 
+    const email = form.email.trim().toLowerCase();
+    const errors = {};
+
     if (!selectedRole) {
-      setFieldErrors({
-        role: 'Select a role before logging in',
-      });
+      errors.role = 'Select a role before logging in';
+    }
+
+    if (!EMAIL_RE.test(email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -110,29 +157,61 @@ export default function Login() {
     try {
       const loggedIn = await login({
         role: selectedRole,
-        email: form.email,
+        email,
         password: form.password,
       });
 
-      navigate(
-        roleHome(loggedIn.role),
-        { replace: true }
-      );
+      navigate(roleHome(loggedIn.role), { replace: true });
     } catch (requestError) {
-      const errors = {};
+      const nextErrors = {};
 
       (requestError.fieldErrors || []).forEach((item) => {
         if (item.field) {
-          errors[item.field] = item.message;
+          nextErrors[item.field] = item.message;
         }
       });
 
-      setFieldErrors(errors);
+      setFieldErrors(nextErrors);
       setError(requestError.message);
     } finally {
       setBusy(false);
     }
   };
+
+  const handleGoogleCredential = useCallback(
+    async (credential) => {
+      if (!selectedRole || busy) {
+        return;
+      }
+
+      setError('');
+      setFieldErrors({});
+      setBusy(true);
+
+      try {
+        const loggedIn = await googleLogin({
+          role: selectedRole,
+          credential,
+        });
+
+        navigate(roleHome(loggedIn.role), { replace: true });
+      } catch (requestError) {
+        const nextErrors = {};
+
+        (requestError.fieldErrors || []).forEach((item) => {
+          if (item.field) {
+            nextErrors[item.field] = item.message;
+          }
+        });
+
+        setFieldErrors(nextErrors);
+        setError(requestError.message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, googleLogin, navigate, selectedRole]
+  );
 
   return (
     <AuthShell
@@ -141,11 +220,10 @@ export default function Login() {
     >
       <form
         onSubmit={submit}
+        noValidate
         className="space-y-3"
       >
-        {error && (
-          <Alert>{error}</Alert>
-        )}
+        {error && <Alert>{error}</Alert>}
 
         <AuthField
           label="Role"
@@ -171,6 +249,23 @@ export default function Login() {
           </div>
         </AuthField>
 
+        {googleLoginAvailable && (
+          <>
+            <GoogleSignInButton
+              disabled={busy}
+              onCredential={handleGoogleCredential}
+            />
+
+            <div className="flex items-center gap-3 py-0.5" aria-hidden="true">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                OR
+              </span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          </>
+        )}
+
         <AuthField
           label="Email ID"
           error={fieldErrors.email}
@@ -182,6 +277,7 @@ export default function Login() {
               disabled={!selectedRole}
               type="email"
               name="email"
+              inputMode="email"
               autoComplete="email"
               value={form.email}
               onChange={handleChange}
@@ -200,14 +296,19 @@ export default function Login() {
             <input
               required
               disabled={!selectedRole}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               name="password"
               autoComplete="current-password"
               minLength="8"
               value={form.password}
               onChange={handleChange}
               placeholder="Enter your password"
-              className={inputClass(fieldErrors.password)}
+              className={inputClass(fieldErrors.password, false, true)}
+            />
+            <PasswordVisibilityButton
+              visible={showPassword}
+              onClick={() => setShowPassword((current) => !current)}
+              disabled={!selectedRole}
             />
           </div>
         </AuthField>
@@ -246,10 +347,105 @@ export default function Login() {
             </Link>
           </div>
         )}
-
-
       </form>
     </AuthShell>
+  );
+}
+
+function GoogleSignInButton({
+  disabled,
+  onCredential,
+}) {
+  const containerRef = useRef(null);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
+  useEffect(() => {
+    if (!clientId || disabled) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const renderButton = () => {
+      if (
+        cancelled ||
+        !containerRef.current ||
+        !window.google?.accounts?.id
+      ) {
+        return;
+      }
+
+      const container = containerRef.current;
+      const width = Math.max(
+        220,
+        Math.min(400, Math.floor(container.getBoundingClientRect().width))
+      );
+
+      container.innerHTML = '';
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (response?.credential) {
+            onCredential(response.credential);
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      window.google.accounts.id.renderButton(container, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width,
+      });
+    };
+
+    loadGoogleIdentityScript()
+      .then(() => {
+        if (cancelled) return;
+        renderButton();
+      })
+      .catch(() => {
+        // The normal login form remains available if Google cannot load.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, disabled, onCredential]);
+
+  if (!clientId) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-[11px] text-slate-500 sm:text-xs">
+        Google Sign-In requires VITE_GOOGLE_CLIENT_ID.
+      </div>
+    );
+  }
+
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="relative flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-xs font-medium text-slate-400 transition sm:min-h-12 sm:text-sm"
+      >
+        <span className="text-base font-bold">G</span>
+        Select a role to continue with Google
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex min-h-11 w-full items-center justify-center overflow-hidden rounded-xl bg-white sm:min-h-12">
+      <div
+        ref={containerRef}
+        className="flex w-full items-center justify-center overflow-hidden rounded-xl"
+      />
+    </div>
   );
 }
 
@@ -260,10 +456,10 @@ export function AuthShell({
   wide = false,
 }) {
   return (
-    <main className="h-[100dvh] w-full overflow-hidden bg-[#f7f4ef] p-[clamp(0.5rem,1.4vh,1rem)] sm:px-5 lg:px-7">
-      <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-center">
-        <section className="grid h-full max-h-[900px] w-full min-h-0 overflow-hidden rounded-[clamp(1rem,2vw,2rem)] border border-white/80 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.16)] lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-[clamp(1.1rem,3vw,3.5rem)] py-[clamp(0.75rem,1.8vh,1.5rem)]">
+    <main className="min-h-[100dvh] w-full overflow-x-hidden bg-[#f7f4ef] p-2 sm:p-4 lg:h-[100dvh] lg:overflow-hidden lg:px-7 lg:py-4">
+      <div className="mx-auto flex min-h-[calc(100dvh-1rem)] w-full max-w-6xl items-center justify-center sm:min-h-[calc(100dvh-2rem)] lg:h-full lg:min-h-0">
+        <section className="grid w-full overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.16)] lg:h-full lg:max-h-[900px] lg:min-h-0 lg:grid-cols-[1.08fr_0.92fr] lg:rounded-[2rem]">
+          <div className="relative z-10 flex min-h-0 min-w-0 flex-col px-4 py-5 sm:px-7 sm:py-6 lg:h-full lg:overflow-y-auto lg:px-[clamp(2rem,3vw,3.5rem)] lg:py-[clamp(0.75rem,1.8vh,1.5rem)]">
             <Link
               to="/"
               className="mb-[clamp(0.45rem,1.5vh,1.1rem)] inline-block w-fit shrink-0"
@@ -272,12 +468,12 @@ export function AuthShell({
               <img
                 src={logo}
                 alt="Fidar Imex Private Limited"
-                className="h-auto w-[clamp(175px,18vw,250px)] max-w-full object-contain"
+                className="h-auto w-44 max-w-full object-contain sm:w-52 lg:w-[clamp(175px,18vw,250px)]"
               />
             </Link>
 
-            <div className={`w-full min-h-0 ${wide ? 'max-w-2xl' : 'max-w-md'}`}>
-              <h1 className="text-[clamp(1.8rem,4.2vh,3rem)] font-extrabold leading-none tracking-tight text-slate-900">
+            <div className={`w-full min-h-0 ${wide ? 'max-w-2xl' : 'max-w-[400px]'}`}>
+              <h1 className="text-3xl font-extrabold leading-none tracking-tight text-slate-900 sm:text-4xl lg:text-[clamp(1.8rem,4.2vh,3rem)]">
                 {title}
               </h1>
 
@@ -292,7 +488,7 @@ export function AuthShell({
               </div>
             </div>
 
-            <p className="mt-auto shrink-0 pt-2 text-[10px] leading-4 text-slate-400 sm:text-[11px]">
+            <p className="mt-6 shrink-0 pt-2 text-[10px] leading-4 text-slate-400 sm:text-[11px] lg:mt-auto">
               © 2026 FIDAR IMEX PRIVATE LIMITED. All rights reserved.
             </p>
           </div>
@@ -339,14 +535,37 @@ export function Alert({ children }) {
   );
 }
 
-export function inputClass(error, highlight = false) {
-  return `w-full appearance-none rounded-xl border bg-white py-[clamp(0.55rem,1.15vh,0.72rem)] pl-10 pr-3 text-[clamp(0.78rem,1.45vh,0.9rem)] text-slate-900 outline-none transition placeholder:text-slate-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
+export function inputClass(
+  error,
+  highlight = false,
+  hasTrailingAction = false
+) {
+  return `w-full appearance-none rounded-xl border bg-white py-[clamp(0.55rem,1.15vh,0.72rem)] pl-10 ${hasTrailingAction ? 'pr-12' : 'pr-3'} text-[clamp(0.78rem,1.45vh,0.9rem)] text-slate-900 outline-none transition placeholder:text-slate-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${
     error
       ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
       : highlight
         ? 'border-orange-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100'
         : 'border-slate-300 focus:border-orange-500 focus:ring-4 focus:ring-orange-100'
   }`;
+}
+
+export function PasswordVisibilityButton({
+  visible,
+  onClick,
+  disabled = false,
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={visible ? 'Hide password' : 'Show password'}
+      aria-pressed={visible}
+      className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-orange-50 hover:text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:cursor-not-allowed disabled:text-slate-300 sm:right-1.5"
+    >
+      {visible ? <EyeOffIcon /> : <EyeIcon />}
+    </button>
+  );
 }
 
 function IconBase({ children }) {
@@ -387,6 +606,26 @@ function LockIcon() {
         <path d="M8 10V7a4 4 0 0 1 8 0v3" />
       </svg>
     </IconBase>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.2A10.6 10.6 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.1 3.7" />
+      <path d="M6.2 6.2C3.8 8 2.5 12 2.5 12s3.5 6 9.5 6a10 10 0 0 0 4.1-.9" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </svg>
   );
 }
 

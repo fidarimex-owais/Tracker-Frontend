@@ -198,12 +198,12 @@ export default function QRCodeGenerator() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-0 py-2 sm:px-2 sm:py-6 lg:px-4 lg:py-8">
       <div className="text-center mb-8">
         <p className="text-green-600 font-semibold text-sm tracking-wide mb-2">
           GENERATE QR CODE
         </p>
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">QR Code Generator</h1>
+        <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl lg:text-4xl">QR Code Generator</h1>
         <p className="text-slate-500 max-w-xl mx-auto">
           Enter the details below and how many stickers you need per hand category. Each
           category gets its own downloadable ZIP.
@@ -283,7 +283,7 @@ export default function QRCodeGenerator() {
       )}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+        <div className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-x-8 md:gap-y-5">
           <Field label="Brand Name" required error={fieldErrors.brandName}>
             <select
               name="brandName"
@@ -394,7 +394,7 @@ export default function QRCodeGenerator() {
             <p className="text-sm font-semibold text-slate-800 mb-2">
               Geolocation <span className="text-red-500">*</span>
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-y-4 md:grid-cols-2 md:gap-x-8 md:gap-y-5">
               <Field label="Latitude" error={fieldErrors.latitude}>
                 <input
                   type="number"
@@ -428,7 +428,7 @@ export default function QRCodeGenerator() {
             {fieldErrors.quantities && (
               <p className="mb-2 text-xs text-red-600">{fieldErrors.quantities}</p>
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {HAND_CATEGORIES.map((hand) => (
                 <div key={hand}>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">

@@ -27,3 +27,37 @@ input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Mobile viewport safety */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media (max-width: 430px) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}

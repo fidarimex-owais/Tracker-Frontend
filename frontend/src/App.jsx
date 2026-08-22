@@ -17,6 +17,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateId from './pages/admin/CreateId';
 import SignupRequests from './pages/admin/SignupRequests';
 import UserManagement from './pages/admin/UserManagement';
+import AdminQrScanner from './pages/admin/AdminQrScanner';
+import AdminBarcodeScanner from './pages/admin/AdminBarcodeScanner';
 
 import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
@@ -79,6 +81,16 @@ export default function App() {
               />
 
               <Route
+                path="qr-scanner"
+                element={<AdminQrScanner />}
+              />
+
+              <Route
+                path="barcode-scanner"
+                element={<AdminBarcodeScanner />}
+              />
+
+              <Route
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
@@ -120,6 +132,16 @@ export default function App() {
               />
 
               <Route
+                path="qr-scanner"
+                element={<AdminQrScanner />}
+              />
+
+              <Route
+                path="barcode-scanner"
+                element={<AdminBarcodeScanner />}
+              />
+
+              <Route
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
@@ -156,6 +178,11 @@ export default function App() {
               />
 
               <Route
+                path="barcode-scanner"
+                element={<AdminBarcodeScanner />}
+              />
+
+              <Route
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
@@ -177,8 +204,8 @@ export default function App() {
               />
 
               <Route
-                path="recovery-sheets"
-                element={<RecoverySheet />}
+                path="barcode-scanner"
+                element={<AdminBarcodeScanner />}
               />
             </Route>
           </Route>

@@ -1,6 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
+const authorize = require('../../middleware/role.middleware');
 const controller = require('./rawRecovery.controller');
 const {
   validateCreateSheet,
@@ -14,9 +15,12 @@ const {
 
 const router = express.Router();
 
-// No role restriction has been specified yet. Any authenticated user can use
-// the Raw Recovery Sheet backend during this backend-only phase.
-router.use(authMiddleware);
+// Barcode Scanner is available to every authenticated portal role.
+// Saved-sheet Edit itself is restricted below to Admin and Sub-Admin.
+router.use(
+  authMiddleware,
+  authorize('admin', 'subadmin', 'vendor', 'supervisor')
+);
 
 router.get(
   '/vendors',
@@ -48,6 +52,12 @@ router.get(
   asyncHandler(controller.getSheet)
 );
 
+router.post(
+  '/:id/rows',
+  validateSheetId,
+  asyncHandler(controller.addRow)
+);
+
 router.get(
   '/:id/rows/:rowNumber',
   validateSheetId,
@@ -68,6 +78,40 @@ router.patch(
   validateSheetId,
   validateRowNumber,
   asyncHandler(controller.completeRow)
+);
+
+router.patch(
+  '/:id/save',
+  validateSheetId,
+  asyncHandler(controller.saveSheet)
+);
+
+router.patch(
+  '/:id/edit',
+  authorize('admin', 'subadmin'),
+  validateSheetId,
+  asyncHandler(controller.editSheet)
+);
+
+router.patch(
+  '/:id/rows/:rowNumber/reopen',
+  validateSheetId,
+  validateRowNumber,
+  asyncHandler(controller.reopenRow)
+);
+
+router.delete(
+  '/:id/rows/:rowNumber/barcodes/:barcodeId',
+  validateSheetId,
+  validateRowNumber,
+  asyncHandler(controller.removeBarcode)
+);
+
+router.delete(
+  '/:id/rows/:rowNumber',
+  validateSheetId,
+  validateRowNumber,
+  asyncHandler(controller.removeRow)
 );
 
 module.exports = router;

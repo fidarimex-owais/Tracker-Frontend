@@ -1,4 +1,4 @@
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
 const BRAND_OPTIONS = [
@@ -94,7 +94,7 @@ const validateCreateId = (req, res, next) => {
   if (!EMAIL_RE.test(email)) {
     errors.push({
       field: 'email',
-      message: 'Enter a valid email address',
+      message: 'Please enter a valid email address.',
     });
   }
 

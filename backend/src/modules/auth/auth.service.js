@@ -13,8 +13,10 @@ const {
 const {
   getSignupRequestModel,
   getApproverRolesForRequestRole,
-  findPendingSignupRequestByEmail,
+  findSignupRequestByEmail,
 } = require('./signupRequest.model');
+
+const { verifyGoogleIdToken } = require('./googleIdentity.service');
 
 const SALT_ROUNDS = 12;
 
@@ -42,6 +44,32 @@ const sanitizeSignupRequest = (request) => ({
   createdAt: request.createdAt,
 });
 
+const createHttpError = (statusCode, message) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const assertUserCanAccessPortal = (user, requestedRole) => {
+  if (!user || user.role !== requestedRole) {
+    throw createHttpError(401, 'Invalid role or account');
+  }
+
+  if (!user.isActive) {
+    throw createHttpError(403, 'This account has been deactivated');
+  }
+
+  if (
+    ['vendor', 'supervisor'].includes(user.role) &&
+    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
+  ) {
+    throw createHttpError(
+      403,
+      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
+    );
+  }
+};
+
 const signup = async ({
   brandName,
   userName,
@@ -50,15 +78,10 @@ const signup = async ({
   role,
   password,
 }) => {
-  const normalizedEmail = email
-    .trim()
-    .toLowerCase();
+  const normalizedEmail = email.trim().toLowerCase();
 
   if (!BRAND_OPTIONS.includes(brandName)) {
-    throw createHttpError(
-      400,
-      'Select a valid brand'
-    );
+    throw createHttpError(400, 'Select a valid brand');
   }
 
   const eligibleApproverRoles =
@@ -71,96 +94,87 @@ const signup = async ({
     );
   }
 
-  const existingUser = await findUserByEmail(
-    normalizedEmail
-  );
+  const [existingUser, existingSignupRequest] = await Promise.all([
+    findUserByEmail(normalizedEmail),
+    findSignupRequestByEmail(normalizedEmail),
+  ]);
 
-  if (existingUser) {
+  if (existingUser || existingSignupRequest) {
     throw createHttpError(
       409,
-      'An account with this email already exists'
-    );
-  }
-
-  const pendingRequest =
-    await findPendingSignupRequestByEmail(
-      normalizedEmail
-    );
-
-  if (pendingRequest) {
-    throw createHttpError(
-      409,
-      'A signup request with this email is already waiting for approval'
+      'This email address is already registered.'
     );
   }
 
   const SignupRequest = getSignupRequestModel();
-  const passwordHash = await bcrypt.hash(
-    password,
-    SALT_ROUNDS
-  );
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const request = await SignupRequest.create({
-    brandName,
-    userName,
-    mobileNumber,
-    email: normalizedEmail,
-    role,
-    passwordHash,
-    eligibleApproverRoles,
-    status: 'pending',
-  });
+  let request;
+
+  try {
+    request = await SignupRequest.create({
+      brandName,
+      userName,
+      mobileNumber,
+      email: normalizedEmail,
+      role,
+      passwordHash,
+      eligibleApproverRoles,
+      status: 'pending',
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw createHttpError(
+        409,
+        'This email address is already registered.'
+      );
+    }
+
+    throw error;
+  }
 
   return sanitizeSignupRequest(request);
 };
 
-const login = async ({
-  role,
-  email,
-  password,
-}) => {
-  const user = await findUserByEmail(
-    email,
-    {
-      includePassword: true,
-    }
-  );
+const login = async ({ role, email, password }) => {
+  const user = await findUserByEmail(email, {
+    includePassword: true,
+  });
+
+  if (!user) {
+    throw createHttpError(401, 'Invalid email or password');
+  }
+
+  const matches = await bcrypt.compare(password, user.passwordHash);
+
+  if (!matches) {
+    throw createHttpError(401, 'Invalid role, email, or password');
+  }
+
+  assertUserCanAccessPortal(user, role);
+
+  return sanitizeUser(user);
+};
+
+const googleLogin = async ({ role, credential }) => {
+  if (!['vendor', 'supervisor'].includes(role)) {
+    throw createHttpError(
+      403,
+      'Google Sign-In is available only for Vendor or Supervisor'
+    );
+  }
+
+  const googleIdentity = await verifyGoogleIdToken(credential);
+  const user = await findUserByEmail(googleIdentity.email);
 
   if (!user) {
     throw createHttpError(
       401,
-      'Invalid email or password'
+      'No registered account was found for this Google email'
     );
   }
 
-  const matches = await bcrypt.compare(
-    password,
-    user.passwordHash
-  );
-
-  if (!matches || user.role !== role) {
-    throw createHttpError(
-      401,
-      'Invalid role, email, or password'
-    );
-  }
-
-  if (!user.isActive) {
-    throw createHttpError(
-      403,
-      'This account has been deactivated'
-    );
-  }
-
-  if (
-    ['vendor', 'supervisor'].includes(user.role) &&
-    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
-  ) {
-    throw createHttpError(
-      403,
-      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
-    );
-  }
+  assertUserCanAccessPortal(user, role);
 
   return sanitizeUser(user);
 };
@@ -169,17 +183,11 @@ const getUserById = async (id) => {
   const user = await findUserById(id);
 
   if (!user) {
-    throw createHttpError(
-      401,
-      'User account no longer exists'
-    );
+    throw createHttpError(401, 'User account no longer exists');
   }
 
   if (!user.isActive) {
-    throw createHttpError(
-      403,
-      'This account has been deactivated'
-    );
+    throw createHttpError(403, 'This account has been deactivated');
   }
 
   if (
@@ -199,9 +207,7 @@ const signToken = (user) => {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
-    throw new Error(
-      'JWT_SECRET is not configured'
-    );
+    throw new Error('JWT_SECRET is not configured');
   }
 
   return jwt.sign(
@@ -210,8 +216,7 @@ const signToken = (user) => {
     },
     secret,
     {
-      expiresIn:
-        process.env.JWT_EXPIRES_IN || '7d',
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     }
   );
 };
@@ -220,15 +225,10 @@ const verifyToken = (token) => {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
-    throw new Error(
-      'JWT_SECRET is not configured'
-    );
+    throw new Error('JWT_SECRET is not configured');
   }
 
-  return jwt.verify(
-    token,
-    secret
-  );
+  return jwt.verify(token, secret);
 };
 
 const ensureAdminUser = async () => {
@@ -301,18 +301,11 @@ const ensureAdminUser = async () => {
   );
 };
 
-const createHttpError = (
-  statusCode,
-  message
-) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-};
 
 module.exports = {
   signup,
   login,
+  googleLogin,
   getUserById,
   signToken,
   verifyToken,

@@ -18,6 +18,7 @@ const {
   buildReviewFilterForActor,
   canActorReviewRequest,
   findPendingSignupRequestByEmail,
+  findSignupRequestByEmail,
   findSignupRequestById,
   listPendingSignupRequestsForActor,
   countPendingSignupRequestsForActor,
@@ -157,22 +158,15 @@ const createUser = async (
     actor
   );
 
-  const existing = await findUserByEmail(email);
+  const [existing, existingSignupRequest] = await Promise.all([
+    findUserByEmail(email),
+    findSignupRequestByEmail(email),
+  ]);
 
-  if (existing) {
+  if (existing || existingSignupRequest) {
     throw createHttpError(
       409,
-      'An account with this email already exists'
-    );
-  }
-
-  const pendingRequest =
-    await findPendingSignupRequestByEmail(email);
-
-  if (pendingRequest) {
-    throw createHttpError(
-      409,
-      'This email has a pending Signup Request. Approve or reject that request first.'
+      'This email address is already registered.'
     );
   }
 
@@ -182,16 +176,29 @@ const createUser = async (
     SALT_ROUNDS
   );
 
-  const user = await User.create({
-    brandName: assignedBrand,
-    userName,
-    mobileNumber,
-    email,
-    role,
-    passwordHash,
-    isActive: true,
-    createdByAdmin: actor.role === 'admin',
-  });
+  let user;
+
+  try {
+    user = await User.create({
+      brandName: assignedBrand,
+      userName,
+      mobileNumber,
+      email,
+      role,
+      passwordHash,
+      isActive: true,
+      createdByAdmin: actor.role === 'admin',
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw createHttpError(
+        409,
+        'This email address is already registered.'
+      );
+    }
+
+    throw error;
+  }
 
   return sanitizePortalUser(user);
 };
@@ -283,7 +290,7 @@ const approveSignupRequest = async (
 
     throw createHttpError(
       409,
-      'An account with this email already exists'
+      'This email address is already registered.'
     );
   }
 
