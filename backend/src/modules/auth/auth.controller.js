@@ -1,14 +1,23 @@
 const authService = require('./auth.service');
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite:
-    process.env.NODE_ENV === 'production'
-      ? 'none'
-      : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+const cookieOptions = (rememberMe = false) => {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite:
+      process.env.NODE_ENV === 'production'
+        ? 'none'
+        : 'lax',
+  };
+
+  // Without "Remember me" this is a browser-session cookie.
+  // With "Remember me" it persists for 7 days.
+  if (rememberMe) {
+    options.maxAge = 7 * 24 * 60 * 60 * 1000;
+  }
+
+  return options;
+};
 
 const signup = async (req, res) => {
   const request = await authService.signup(req.body);
@@ -21,10 +30,19 @@ const signup = async (req, res) => {
   });
 };
 
-const sendAuthenticatedResponse = (res, user, message) => {
+const sendAuthenticatedResponse = (
+  res,
+  user,
+  message,
+  rememberMe = false
+) => {
   const token = authService.signToken(user);
 
-  res.cookie('auth_token', token, cookieOptions());
+  res.cookie(
+    'auth_token',
+    token,
+    cookieOptions(rememberMe)
+  );
 
   res.json({
     success: true,
@@ -36,16 +54,28 @@ const sendAuthenticatedResponse = (res, user, message) => {
 
 const login = async (req, res) => {
   const user = await authService.login(req.body);
-  return sendAuthenticatedResponse(res, user, 'Logged in');
+
+  return sendAuthenticatedResponse(
+    res,
+    user,
+    'Logged in',
+    req.body.rememberMe
+  );
 };
 
 const googleLogin = async (req, res) => {
   const user = await authService.googleLogin(req.body);
-  return sendAuthenticatedResponse(res, user, 'Signed in with Google');
+
+  return sendAuthenticatedResponse(
+    res,
+    user,
+    'Signed in with Google',
+    req.body.rememberMe
+  );
 };
 
 const logout = async (req, res) => {
-  res.clearCookie('auth_token', cookieOptions());
+  res.clearCookie('auth_token', cookieOptions(false));
 
   res.json({
     success: true,

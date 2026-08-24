@@ -57,6 +57,18 @@ const findRecoverySheet = async (req, res) => {
   });
 };
 
+const deleteRecoverySheet = async (req, res) => {
+  const sheet = await service.deleteRecoverySheet(req.params.id);
+
+  res.json({
+    success: true,
+    message: 'Recovery Sheet deleted successfully',
+    data: {
+      id: sheet._id.toString(),
+    },
+  });
+};
+
 module.exports = {
   getGenerationStatus,
   generateRecoverySheet,
@@ -64,4 +76,5 @@ module.exports = {
   getRecoverySheetByRawId,
   listRecoverySheetOptions,
   findRecoverySheet,
+  deleteRecoverySheet,
 };

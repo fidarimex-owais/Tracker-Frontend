@@ -11,6 +11,82 @@ const isFiniteNumber = (value) =>
 const isValidISODate = (value) =>
   typeof value === 'string' && !Number.isNaN(Date.parse(value));
 
+const BUSINESS_TIME_ZONE =
+  process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
+
+const formatDateInBusinessTimeZone = (date) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const getBusinessToday = () =>
+  formatDateInBusinessTimeZone(new Date());
+
+const toDateOnlyString = (value) => {
+  const rawValue = String(value || '').trim();
+  const datePrefix = rawValue.match(/^(\d{4}-\d{2}-\d{2})/);
+
+  if (datePrefix) {
+    return datePrefix[1];
+  }
+
+  const parsedDate = new Date(rawValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return '';
+  }
+
+  return formatDateInBusinessTimeZone(parsedDate);
+};
+
+const enforceSubadminPackageDate = (req, res, next) => {
+  if (req.user?.role !== 'subadmin') {
+    return next();
+  }
+
+  const packageDate =
+    req.method === 'GET'
+      ? req.query?.packageDate
+      : req.body?.packageDate;
+
+  // Existing validators handle missing or malformed date values.
+  if (!packageDate || !isValidISODate(String(packageDate))) {
+    return next();
+  }
+
+  const requestedDate = toDateOnlyString(packageDate);
+  const today = getBusinessToday();
+
+  if (requestedDate && requestedDate < today) {
+    return res.status(400).json({
+      success: false,
+      message:
+        'Sub-admin can generate QR codes only for today or future dates',
+      errors: [
+        {
+          field: 'packageDate',
+          message:
+            'Past package dates are not allowed for Sub-admin QR generation',
+        },
+      ],
+    });
+  }
+
+  return next();
+};
+
 const validateQuantities = (quantities, errors) => {
   if (
     typeof quantities !== 'object' ||
@@ -271,4 +347,5 @@ const validateResolveConflict = (req, res, next) => {
 module.exports = {
   validateSubmitLine,
   validateResolveConflict,
+  enforceSubadminPackageDate,
 };

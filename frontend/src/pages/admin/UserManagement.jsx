@@ -5,6 +5,7 @@ import {
 } from 'react';
 
 import {
+  deleteUser,
   getUsers,
   updateUserBrand,
   updateUserRole,
@@ -48,6 +49,22 @@ const FILTERS_BY_ACTOR = {
 const MANAGEABLE_ROLE_OPTIONS = {
   admin: [
     'admin',
+    'subadmin',
+    'vendor',
+    'supervisor',
+  ],
+  subadmin: [
+    'vendor',
+    'supervisor',
+  ],
+  vendor: [
+    'supervisor',
+  ],
+};
+
+
+const DELETABLE_ROLES_BY_ACTOR = {
+  admin: [
     'subadmin',
     'vendor',
     'supervisor',
@@ -244,6 +261,43 @@ export default function UserManagement() {
     }
   };
 
+
+  const removeUser = async (target) => {
+    const label =
+      target.userName || target.email || 'this user';
+
+    const confirmed = window.confirm(
+      `Delete ${label}? This permanently removes the account and cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyId(target.id);
+    setError('');
+
+    try {
+      await deleteUser(
+        target.id,
+        currentUser.role
+      );
+
+      setUsers((previous) =>
+        previous.filter(
+          (user) => user.id !== target.id
+        )
+      );
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          e.message
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <section>
       <div className="mb-6">
@@ -296,8 +350,19 @@ export default function UserManagement() {
           Loading users...
         </p>
       ) : (
-        <div className="responsive-scroll rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-[680px] w-full text-sm">
+        <div>
+          <p className="mb-2 text-[11px] font-medium text-slate-400 lg:hidden">
+            Swipe left/right to view all user columns.
+          </p>
+
+          <div
+            className="w-full overflow-x-scroll rounded-xl border border-slate-200 bg-white shadow-sm"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarGutter: 'stable',
+            }}
+          >
+            <table className="w-full min-w-[1050px] text-sm">
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
                 <th className="px-4 py-3">Name</th>
@@ -307,6 +372,7 @@ export default function UserManagement() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
                 <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3">Delete</th>
               </tr>
             </thead>
 
@@ -424,12 +490,29 @@ export default function UserManagement() {
                         type="button"
                         disabled={busyId === user.id}
                         onClick={() => toggleStatus(user)}
-                        className="rounded-md border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        className="whitespace-nowrap rounded-md border border-slate-300 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                       >
                         {user.isActive
                           ? 'Deactivate'
                           : 'Activate'}
                       </button>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {(DELETABLE_ROLES_BY_ACTOR[
+                        currentUser.role
+                      ] || []).includes(user.role) ? (
+                        <button
+                          type="button"
+                          disabled={busyId === user.id}
+                          onClick={() => removeUser(user)}
+                          className="whitespace-nowrap rounded-md border border-red-200 bg-white px-3 py-1.5 font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -438,7 +521,7 @@ export default function UserManagement() {
               {visibleUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="8"
                     className="px-4 py-10 text-center text-slate-400"
                   >
                     No users found for this role and brand access.
@@ -446,7 +529,8 @@ export default function UserManagement() {
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
     </section>

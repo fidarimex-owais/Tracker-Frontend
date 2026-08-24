@@ -83,6 +83,7 @@ export default function Login() {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -105,6 +106,7 @@ export default function Login() {
     setSelectedRole(role);
     setForm({ email: '', password: '' });
     setShowPassword(false);
+    setRememberMe(false);
     setFieldErrors({});
     setError('');
 
@@ -159,6 +161,7 @@ export default function Login() {
         role: selectedRole,
         email,
         password: form.password,
+        rememberMe,
       });
 
       navigate(roleHome(loggedIn.role), { replace: true });
@@ -192,6 +195,7 @@ export default function Login() {
         const loggedIn = await googleLogin({
           role: selectedRole,
           credential,
+          rememberMe,
         });
 
         navigate(roleHome(loggedIn.role), { replace: true });
@@ -210,7 +214,7 @@ export default function Login() {
         setBusy(false);
       }
     },
-    [busy, googleLogin, navigate, selectedRole]
+    [busy, googleLogin, navigate, rememberMe, selectedRole]
   );
 
   return (
@@ -317,6 +321,8 @@ export default function Login() {
           <label className="flex items-center gap-2 text-slate-600">
             <input
               type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 accent-orange-500"
             />
             Remember me

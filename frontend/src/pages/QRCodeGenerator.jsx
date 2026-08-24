@@ -5,11 +5,21 @@ import {
   createRecord,
   resolveConflict,
 } from '../services/recordService';
+import { useAuth } from '../auth/useAuth';
 
 const BRAND_OPTIONS = ['Hi Banana', 'Joker', 'Banana Man'];
 const VENDOR_OPTIONS = ['Yogesh Korhale', 'Sachin Markad', 'Tannaji Kashid'];
 const WEIGHT_OPTIONS = [13.5, 14];
 const HAND_CATEGORIES = [4, 5, 6, 8];
+
+const getLocalToday = () => {
+  const now = new Date();
+  const localDate = new Date(
+    now.getTime() - now.getTimezoneOffset() * 60 * 1000
+  );
+
+  return localDate.toISOString().slice(0, 10);
+};
 
 const initialFormState = {
   brandName: '',
@@ -26,6 +36,9 @@ const initialFormState = {
 };
 
 export default function QRCodeGenerator() {
+  const { user } = useAuth();
+  const isSubAdmin = user?.role === 'subadmin';
+  const today = getLocalToday();
   const [form, setForm] = useState(initialFormState);
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitError, setSubmitError] = useState(null);
@@ -63,7 +76,12 @@ export default function QRCodeGenerator() {
       errors.weight = 'Weight must be a positive number';
     }
     if (!form.address.trim()) errors.address = 'Address is required';
-    if (!form.packageDate) errors.packageDate = 'Package date is required';
+    if (!form.packageDate) {
+      errors.packageDate = 'Package date is required';
+    } else if (isSubAdmin && form.packageDate < today) {
+      errors.packageDate =
+        'Sub-admin can generate QR codes only for today or future dates';
+    }
     if (form.latitude === '' || Number(form.latitude) < -90 || Number(form.latitude) > 90) {
       errors.latitude = 'Latitude must be between -90 and 90';
     }
@@ -384,6 +402,7 @@ export default function QRCodeGenerator() {
                 type="date"
                 name="packageDate"
                 value={form.packageDate}
+                min={isSubAdmin ? today : undefined}
                 onChange={handleChange}
                 className={inputClass(fieldErrors.packageDate)}
               />

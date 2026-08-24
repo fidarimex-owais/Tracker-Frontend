@@ -1,0 +1,29 @@
+I’ve divided the credentials by role and brand. All passwords are `123456789`.
+
+### Admin
+
+| Brand      | Email                                     | Password  |
+| ---------- | ----------------------------------------- | --------- |
+| All Brands | [admin@gmail.com](mailto:admin@gmail.com) | 123456789 |
+
+### Subadmin
+
+| Brand      | Email                                           | Password  |
+| ---------- | ----------------------------------------------- | --------- |
+| All Brands | [subadmin@gmail.com](mailto:subadmin@gmail.com) | 123456789 |
+
+### Vendors
+
+| Brand      | Email                                                             | Password  |
+| ---------- | ----------------------------------------------------------------- | --------- |
+| Banana Man | [vendor_banana_man@gmail.com](mailto:vendor_banana_man@gmail.com) | 123456789 |
+| Rajmata    | [vendor_rajmata@example.com](mailto:vendor_rajmata@example.com)   | 123456789 |
+| Hi Banana  | [vendor_hi_banana@gmail.com](mailto:vendor_hi_banana@gmail.com)   | 123456789 |
+
+### Brand / Supervisor
+
+| Brand      | Email                                                                     | Password  |
+| ---------- | ------------------------------------------------------------------------- | --------- |
+| Banana Man | [supervisor_banana_man@gmail.com](mailto:supervisor_banana_man@gmail.com) | 123456789 |
+| Rajmata    | [supervisor_rajmata@gmail.com](mailto:supervisor_rajmata@gmail.com)       | 123456789 |
+| Hi Banana  | [supervisor_hi_banana@gmail.com](mailto:supervisor_hi_banana@gmail.com)   | 123456789 |

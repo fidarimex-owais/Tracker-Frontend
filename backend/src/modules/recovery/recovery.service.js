@@ -255,6 +255,18 @@ const findRecoverySheet = async ({
   return sheet;
 };
 
+const deleteRecoverySheet = async (id) => {
+  const RecoverySheet = getRecoverySheetModel();
+
+  const sheet = await RecoverySheet.findByIdAndDelete(id);
+
+  if (!sheet) {
+    throw createHttpError(404, 'Recovery Sheet not found');
+  }
+
+  return sheet;
+};
+
 const createHttpError = (statusCode, message) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -270,4 +282,5 @@ module.exports = {
   getRecoverySheetByRawId,
   listRecoverySheetOptions,
   findRecoverySheet,
+  deleteRecoverySheet,
 };

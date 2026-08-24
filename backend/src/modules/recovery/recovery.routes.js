@@ -47,6 +47,13 @@ router.get(
   asyncHandler(controller.getRecoverySheetByRawId)
 );
 
+router.delete(
+  '/:id',
+  authorize('admin'),
+  validateRecoverySheetId,
+  asyncHandler(controller.deleteRecoverySheet)
+);
+
 router.get(
   '/:id',
   validateRecoverySheetId,

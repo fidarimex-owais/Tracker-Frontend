@@ -55,4 +55,10 @@ router.patch(
   asyncHandler(adminController.updateStatus)
 );
 
+
+router.delete(
+  '/users/:id',
+  asyncHandler(adminController.deleteUser)
+);
+
 module.exports = router;

@@ -150,3 +150,14 @@ export const updateUserStatus = async (
       { isActive }
     )
   ).data;
+
+
+export const deleteUser = async (
+  id,
+  actorRole = 'admin'
+) =>
+  (
+    await api.delete(
+      `${userBase(actorRole)}/${id}`
+    )
+  ).data;

@@ -130,6 +130,20 @@ const updateStatus = async (req, res) => {
   });
 };
 
+
+const deleteUser = async (req, res) => {
+  const user = await service.deleteUser(
+    req.params.id,
+    req.user
+  );
+
+  res.json({
+    success: true,
+    message: 'User deleted successfully',
+    user,
+  });
+};
+
 module.exports = {
   getDashboard,
   createUser,
@@ -142,4 +156,5 @@ module.exports = {
   updateRole,
   updateBrand,
   updateStatus,
+  deleteUser,
 };

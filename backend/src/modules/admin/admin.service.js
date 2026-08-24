@@ -55,6 +55,14 @@ const VENDOR_MANAGEABLE_ROLES = [
   'supervisor',
 ];
 
+
+const DELETABLE_ROLES_BY_ACTOR = {
+  admin: ['subadmin', 'vendor', 'supervisor'],
+  subadmin: ['vendor', 'supervisor'],
+  vendor: ['supervisor'],
+  supervisor: [],
+};
+
 const sanitizePortalUser = (user) => ({
   id: user._id.toString(),
   userName: user.userName || '',
@@ -611,6 +619,55 @@ const updateStatus = async (
   return sanitizeUser(target);
 };
 
+
+const deleteUser = async (
+  userId,
+  actor
+) => {
+  const target = await findUserById(userId);
+
+  if (!target) {
+    throw createHttpError(
+      404,
+      'User not found'
+    );
+  }
+
+  const allowedRoles =
+    DELETABLE_ROLES_BY_ACTOR[actor.role] || [];
+
+  if (!allowedRoles.includes(target.role)) {
+    throw createHttpError(
+      403,
+      `${formatRole(actor.role)} cannot delete a ${formatRole(target.role)} account`
+    );
+  }
+
+  if (target._id.toString() === actor.id) {
+    throw createHttpError(
+      400,
+      'You cannot delete your own account'
+    );
+  }
+
+  if (actor.role === 'vendor') {
+    const actorBrand = requireActorBrand(actor);
+    const targetBrand = getEffectiveBrand(target);
+
+    if (targetBrand !== actorBrand) {
+      throw createHttpError(
+        403,
+        `Vendors can delete only Supervisors assigned to ${actorBrand}`
+      );
+    }
+  }
+
+  const deletedUser = sanitizeUser(target);
+  await target.deleteOne();
+
+  return deletedUser;
+};
+
 const ensureActorCanManageTarget = (actor, target) => {
   if (actor.role === 'admin') {
     return;
@@ -1153,4 +1210,5 @@ module.exports = {
   updateRole,
   updateBrand,
   updateStatus,
+  deleteUser,
 };

@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../auth/useAuth';
 
 import {
+  deleteRecoverySheet,
   findRecoverySheet,
   getRecoverySheetOptions,
 } from '../../services/recoveryService';
@@ -30,6 +31,7 @@ export default function RecoverySheet() {
   const { user } = useAuth();
   const vendorTodayOnly = user.role === 'vendor';
   const canDownload = ['admin', 'subadmin'].includes(user.role);
+  const canDelete = user.role === 'admin';
   const [options, setOptions] = useState([]);
   const [packagingDate, setPackagingDate] = useState('');
   const [vendorName, setVendorName] = useState('');
@@ -37,7 +39,9 @@ export default function RecoverySheet() {
   const [sheet, setSheet] = useState(null);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [loadingSheet, setLoadingSheet] = useState(false);
+  const [deletingSheet, setDeletingSheet] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -110,6 +114,7 @@ export default function RecoverySheet() {
     setLineNumber('');
     setSheet(null);
     setError('');
+    setMessage('');
   };
 
   const handleVendorNameChange = (event) => {
@@ -117,6 +122,7 @@ export default function RecoverySheet() {
     setLineNumber('');
     setSheet(null);
     setError('');
+    setMessage('');
   };
 
   const handleLineNumberChange = async (event) => {
@@ -125,6 +131,7 @@ export default function RecoverySheet() {
     setLineNumber(nextLineNumber);
     setSheet(null);
     setError('');
+    setMessage('');
 
     if (!packagingDate || !vendorName || !nextLineNumber) {
       return;
@@ -148,6 +155,43 @@ export default function RecoverySheet() {
       );
     } finally {
       setLoadingSheet(false);
+    }
+  };
+
+  const handleDeleteRecoverySheet = async () => {
+    if (!sheet || !canDelete || deletingSheet) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete the Recovery Sheet for ${formatDate(sheet.packagingDate)} / ${sheet.vendorName} / Line ${sheet.lineNumber}?\n\nThis permanently deletes the generated Recovery Sheet. The Raw Recovery Sheet is not deleted.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingSheet(true);
+    setError('');
+    setMessage('');
+
+    try {
+      await deleteRecoverySheet(sheet._id);
+
+      setOptions((current) =>
+        current.filter((item) => item.id !== String(sheet._id))
+      );
+      setSheet(null);
+      setLineNumber('');
+      setMessage('Recovery Sheet deleted successfully.');
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          requestError.message ||
+          'Unable to delete Recovery Sheet'
+      );
+    } finally {
+      setDeletingSheet(false);
     }
   };
 
@@ -310,6 +354,12 @@ export default function RecoverySheet() {
         </div>
       </div>
 
+      {message && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {message}
+        </div>
+      )}
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -341,15 +391,31 @@ export default function RecoverySheet() {
                 <Info label="Line Number" value={`Line ${sheet.lineNumber}`} />
               </div>
 
-              {canDownload && (
-                <button
-                  type="button"
-                  onClick={downloadRecoverySheet}
-                  className="inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 text-xs font-bold text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200 sm:w-auto sm:text-sm"
-                >
-                  <DownloadIcon />
-                  Download CSV
-                </button>
+              {(canDownload || canDelete) && (
+                <div className="flex w-full shrink-0 flex-col gap-2 min-[390px]:flex-row sm:w-auto">
+                  {canDownload && (
+                    <button
+                      type="button"
+                      onClick={downloadRecoverySheet}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 text-xs font-bold text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200 sm:text-sm"
+                    >
+                      <DownloadIcon />
+                      Download CSV
+                    </button>
+                  )}
+
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteRecoverySheet}
+                      disabled={deletingSheet}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-xs font-bold text-red-600 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                    >
+                      <DeleteIcon />
+                      {deletingSheet ? 'Deleting...' : 'Delete'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -432,6 +498,26 @@ export default function RecoverySheet() {
 }
 
 
+
+function DeleteIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="m19 6-1 14H6L5 6" />
+      <path d="M10 11v5M14 11v5" />
+    </svg>
+  );
+}
 
 function DownloadIcon() {
   return (

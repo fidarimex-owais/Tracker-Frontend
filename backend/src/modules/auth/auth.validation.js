@@ -44,6 +44,8 @@ const validateCredentials = (req, res, next) => {
       ? req.body.password
       : '';
 
+  const rememberMe = req.body?.rememberMe === true;
+
   const errors = [];
 
   if (!LOGIN_ROLE_OPTIONS.includes(role)) {
@@ -79,6 +81,7 @@ const validateCredentials = (req, res, next) => {
     role,
     email,
     password,
+    rememberMe,
   };
 
   return next();
@@ -94,6 +97,8 @@ const validateGoogleCredentials = (req, res, next) => {
     typeof req.body?.credential === 'string'
       ? req.body.credential.trim()
       : '';
+
+  const rememberMe = req.body?.rememberMe === true;
 
   const errors = [];
 
@@ -122,6 +127,7 @@ const validateGoogleCredentials = (req, res, next) => {
   req.body = {
     role,
     credential,
+    rememberMe,
   };
 
   return next();
@@ -166,6 +172,8 @@ const validateSignupRequest = (req, res, next) => {
     typeof req.body?.confirmPassword === 'string'
       ? req.body.confirmPassword
       : '';
+
+  const termsAccepted = req.body?.termsAccepted === true;
 
   const errors = [];
 
@@ -218,6 +226,14 @@ const validateSignupRequest = (req, res, next) => {
     });
   }
 
+  if (!termsAccepted) {
+    errors.push({
+      field: 'termsAccepted',
+      message:
+        'You must agree to the Terms & Conditions before registering.',
+    });
+  }
+
   if (errors.length > 0) {
     return res.status(400).json({
       success: false,
@@ -234,6 +250,7 @@ const validateSignupRequest = (req, res, next) => {
     email,
     password,
     confirmPassword,
+    termsAccepted,
   };
 
   return next();

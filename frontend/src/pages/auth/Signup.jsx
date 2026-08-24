@@ -54,6 +54,7 @@ export default function Signup() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -79,6 +80,7 @@ export default function Signup() {
     setForm(INITIAL_FORM);
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setTermsAccepted(false);
     setFieldErrors({});
     setError('');
     setSuccess('');
@@ -129,6 +131,11 @@ export default function Signup() {
       errors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!termsAccepted) {
+      errors.termsAccepted =
+        'You must agree to the Terms & Conditions before registering.';
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -144,6 +151,7 @@ export default function Signup() {
         ...form,
         email,
         role: selectedRole,
+        termsAccepted,
       });
 
       setSuccess(
@@ -154,6 +162,7 @@ export default function Signup() {
       setForm(INITIAL_FORM);
       setShowPassword(false);
       setShowConfirmPassword(false);
+      setTermsAccepted(false);
     } catch (requestError) {
       const nextErrors = {};
 
@@ -375,23 +384,40 @@ export default function Signup() {
               </AuthField>
             </div>
 
-            <label className="flex items-start gap-2 text-xs text-slate-600 sm:text-sm">
-              <input
-                required
-                type="checkbox"
-                className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-orange-500"
-              />
-              <span>
-                I agree to the{' '}
-                <span className="font-semibold text-orange-600">
-                  Terms & Conditions
+            <div>
+              <label className="flex items-start gap-2 text-xs text-slate-600 sm:text-sm">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => {
+                    setTermsAccepted(event.target.checked);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      termsAccepted: '',
+                    }));
+                    setError('');
+                  }}
+                  aria-invalid={Boolean(fieldErrors.termsAccepted)}
+                  className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-orange-500"
+                />
+                <span>
+                  I agree to the{' '}
+                  <span className="font-semibold text-orange-600">
+                    Terms & Conditions
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+
+              {fieldErrors.termsAccepted && (
+                <p className="mt-1 text-[11px] font-semibold leading-4 text-red-600">
+                  {fieldErrors.termsAccepted}
+                </p>
+              )}
+            </div>
 
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || !termsAccepted}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
             >
               <RegisterIcon />

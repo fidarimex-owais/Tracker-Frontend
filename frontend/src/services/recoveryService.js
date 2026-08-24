@@ -19,3 +19,9 @@ export const findRecoverySheet = async ({
       },
     })
   ).data;
+
+
+export const deleteRecoverySheet = async (sheetId) =>
+  (
+    await api.delete(`/api/recovery-sheets/${sheetId}`)
+  ).data;

@@ -7,13 +7,22 @@ export const API_BASE_URL =
 
 const TOKEN_KEY = 'fidar_auth_token';
 
-export const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
+export const getAuthToken = () =>
+  sessionStorage.getItem(TOKEN_KEY) ||
+  localStorage.getItem(TOKEN_KEY);
 
-export const setAuthToken = (token) => {
-  if (token) {
+export const setAuthToken = (token, rememberMe = false) => {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+
+  if (!token) {
+    return;
+  }
+
+  if (rememberMe) {
     localStorage.setItem(TOKEN_KEY, token);
   } else {
-    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.setItem(TOKEN_KEY, token);
   }
 };
 
