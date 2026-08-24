@@ -23,6 +23,7 @@ const links = {
       showPendingCount: true,
     },
     { to: '/admin/qr-generator', label: 'Generate QR' },
+    { to: '/admin/qr-brand-details', label: 'QR Brand Details' },
     { to: '/admin/qr-scanner', label: 'QR Scanner' },
     { to: '/admin/barcode-scanner', label: 'Barcode Scanner' },
     { to: '/admin/recovery-sheets', label: 'Recovery Sheet' },
@@ -117,7 +118,7 @@ export default function PortalLayout() {
   const handleLogout = async () => {
     await logout();
 
-    navigate('/login', {
+    navigate('/', {
       replace: true,
     });
   };

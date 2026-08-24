@@ -19,6 +19,7 @@ import SignupRequests from './pages/admin/SignupRequests';
 import UserManagement from './pages/admin/UserManagement';
 import AdminQrScanner from './pages/admin/AdminQrScanner';
 import AdminBarcodeScanner from './pages/admin/AdminBarcodeScanner';
+import QrBrandDetails from './pages/admin/QrBrandDetails';
 
 import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
@@ -83,6 +84,11 @@ export default function App() {
               <Route
                 path="qr-scanner"
                 element={<AdminQrScanner />}
+              />
+
+              <Route
+                path="qr-brand-details"
+                element={<QrBrandDetails />}
               />
 
               <Route

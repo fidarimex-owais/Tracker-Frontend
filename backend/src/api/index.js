@@ -8,6 +8,7 @@ const recordsRoutes = require('../modules/records/records.routes');
 const scanningRoutes = require('../modules/scanning/scanning.routes');
 const rawRecoveryRoutes = require('../modules/rawRecovery/rawRecovery.routes');
 const recoveryRoutes = require('../modules/recovery/recovery.routes');
+const qrBrandDetailsRoutes = require('../modules/qrBrandDetails/qrBrandDetails.routes');
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/records', recordsRoutes);
 router.use('/scanning', scanningRoutes);
 router.use('/raw-recovery-sheets', rawRecoveryRoutes);
 router.use('/recovery-sheets', recoveryRoutes);
+router.use('/qr-brand-details', qrBrandDetailsRoutes);
 
 module.exports = router;
