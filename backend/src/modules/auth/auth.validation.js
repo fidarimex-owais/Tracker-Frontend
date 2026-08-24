@@ -3,7 +3,7 @@ const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
 const BRAND_OPTIONS = [
   'Hi Banana',
-  'Rajmata',
+  'Joker',
   'Banana Man',
 ];
 
@@ -187,7 +187,7 @@ const validateSignupRequest = (req, res, next) => {
   if (!BRAND_OPTIONS.includes(brandName)) {
     errors.push({
       field: 'brandName',
-      message: 'Select Hi Banana, Rajmata, or Banana Man',
+      message: 'Select Hi Banana, Joker, or Banana Man',
     });
   }
 

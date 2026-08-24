@@ -5,9 +5,9 @@ import { createId } from '../../services/adminService';
 
 const BRAND_OPTIONS = [
   'Hi Banana',
-  'Rajmata',
   'Banana Man',
-];
+  'Joker',
+]
 
 const ROLE_OPTIONS = {
   admin: [

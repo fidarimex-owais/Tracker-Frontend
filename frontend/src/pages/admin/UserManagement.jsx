@@ -16,7 +16,7 @@ import { useAuth } from '../../auth/useAuth';
 
 const BRAND_OPTIONS = [
   'Hi Banana',
-  'Rajmata',
+  'Joker',
   'Banana Man',
 ];
 

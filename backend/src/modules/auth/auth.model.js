@@ -3,7 +3,7 @@ const { getUserDb } = require('../../config/db');
 
 const BRAND_OPTIONS = [
   'Hi Banana',
-  'Rajmata',
+  'Joker',
   'Banana Man',
 ];
 

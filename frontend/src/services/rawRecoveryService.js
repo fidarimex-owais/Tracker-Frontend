@@ -75,6 +75,18 @@ export const saveRawRecoverySheet = async (sheetId) =>
   ).data;
 
 
+export const getRawRecoveryResetStatus = async (sheetId) =>
+  (
+    await api.get(`/api/raw-recovery-sheets/${sheetId}/reset-status`)
+  ).data;
+
+export const resetRawRecoverySheet = async (sheetId, { deleteGeneratedRecovery = false } = {}) =>
+  (
+    await api.patch(`/api/raw-recovery-sheets/${sheetId}/reset`, {
+      deleteGeneratedRecovery,
+    })
+  ).data;
+
 export const editRawRecoverySheet = async (sheetId) =>
   (
     await api.patch(`/api/raw-recovery-sheets/${sheetId}/edit`)

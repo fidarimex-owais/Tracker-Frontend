@@ -11,6 +11,8 @@ import {
   listRawRecoveryVendors,
   lookupRawRecoverySheet,
   removeRawRecoveryRow,
+  getRawRecoveryResetStatus,
+  resetRawRecoverySheet,
   saveRawRecoverySheet,
   editRawRecoverySheet,
   reopenRawRecoveryRow,
@@ -56,6 +58,8 @@ export default function AdminBarcodeScanner() {
   const [rowActionBusy, setRowActionBusy] = useState(false);
   const [savingSheet, setSavingSheet] = useState(false);
   const [editingSheet, setEditingSheet] = useState(false);
+  const [resettingSheet, setResettingSheet] = useState(false);
+  const [showRecoveryResetWarning, setShowRecoveryResetWarning] = useState(false);
   const [recoverySheetId, setRecoverySheetId] = useState('');
 
   const selectedRow = useMemo(
@@ -865,6 +869,86 @@ export default function AdminBarcodeScanner() {
     }
   };
 
+  const applyResetResult = (result) => {
+    const resetSheet = result.data.sheet;
+    const firstRow = [...(resetSheet.rows || [])].sort(
+      (left, right) => left.rowNumber - right.rowNumber
+    )[0];
+
+    setSheet(resetSheet);
+    setSelectedRowNumber(firstRow?.rowNumber || null);
+    setManualBarcode('');
+    setRecoverySheetId('');
+    setShowRecoveryResetWarning(false);
+    setMessage(
+      result.data.recoveryDeleted
+        ? 'Recovery Sheet deleted and Raw Recovery Sheet reset. All scanned barcode data was cleared.'
+        : 'Raw Recovery Sheet reset. All scanned barcode data was cleared.'
+    );
+  };
+
+  const performRawRecoveryReset = async (deleteGeneratedRecovery = false) => {
+    if (!sheet || resettingSheet || user.role !== 'admin') return;
+
+    stopCamera();
+    setResettingSheet(true);
+    setError('');
+    setMessage('');
+    setCameraMessage('');
+
+    try {
+      const result = await resetRawRecoverySheet(sheet._id, {
+        deleteGeneratedRecovery,
+      });
+      applyResetResult(result);
+    } catch (requestError) {
+      const status = requestError.response?.status;
+      const serverMessage = requestError.response?.data?.message || '';
+
+      if (
+        !deleteGeneratedRecovery &&
+        status === 409 &&
+        serverMessage.toLowerCase().includes('recovery sheet already exists')
+      ) {
+        setShowRecoveryResetWarning(true);
+        return;
+      }
+
+      setError(normalizeError(requestError, 'Unable to reset the Raw Recovery Sheet'));
+    } finally {
+      setResettingSheet(false);
+    }
+  };
+
+  const resetRawRecoveryData = async () => {
+    if (!sheet || resettingSheet || user.role !== 'admin') return;
+
+    setResettingSheet(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const statusResult = await getRawRecoveryResetStatus(sheet._id);
+      if (statusResult.data.hasGeneratedRecoverySheet) {
+        setShowRecoveryResetWarning(true);
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Reset this Raw Recovery Sheet?\n\n${sheet.packagingDate} / ${sheet.vendorName} / Line ${sheet.lineNumber}\n\nScanned barcode data will be permanently cleared. Packaging Date, Vendor, Line Number, and the current rows will be kept.`
+      );
+
+      if (confirmed) {
+        setResettingSheet(false);
+        await performRawRecoveryReset(false);
+      }
+    } catch (requestError) {
+      setError(normalizeError(requestError, 'Unable to check the Raw Recovery Sheet'));
+    } finally {
+      setResettingSheet(false);
+    }
+  };
+
   const resetSetup = () => {
     stopCamera();
     setSheet(null);
@@ -903,7 +987,55 @@ export default function AdminBarcodeScanner() {
         sheet={sheet}
         onSubmit={loadOrCreateSheet}
         onReset={resetSetup}
+        onResetData={resetRawRecoveryData}
+        resettingSheet={resettingSheet}
+        canResetData={user.role === 'admin' && Boolean(sheet)}
       />
+
+      {showRecoveryResetWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recovery-reset-warning-title"
+            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-6"
+          >
+            <h3
+              id="recovery-reset-warning-title"
+              className="text-xl font-extrabold text-slate-900"
+            >
+              Recovery Sheet Already Exists
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              A generated Recovery Sheet already exists for this Packaging Date,
+              Vendor, and Line Number.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              To reset the Raw Recovery Sheet, the existing generated Recovery
+              Sheet must first be deleted. Deleting it and resetting will
+              permanently clear the scanned barcode data.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRecoveryResetWarning(false)}
+                disabled={resettingSheet}
+                className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => performRawRecoveryReset(true)}
+                disabled={resettingSheet}
+                className="min-h-11 rounded-lg bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {resettingSheet ? 'Deleting & Resetting...' : 'Delete Recovery Sheet & Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
@@ -988,6 +1120,9 @@ function SetupCard({
   sheet,
   onSubmit,
   onReset,
+  onResetData,
+  resettingSheet,
+  canResetData,
 }) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm sm:rounded-2xl sm:p-5">
@@ -1072,13 +1207,27 @@ function SetupCard({
               {loadingSheet ? 'Loading...' : 'Continue'}
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={onReset}
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:text-sm"
-            >
-              Change Setup
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onReset}
+                disabled={resettingSheet}
+                className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+              >
+                Change Setup
+              </button>
+
+              {canResetData && (
+                <button
+                  type="button"
+                  onClick={onResetData}
+                  disabled={resettingSheet}
+                  className="min-h-11 rounded-lg border border-red-200 bg-white px-4 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                >
+                  {resettingSheet ? 'Resetting...' : 'Reset Sheet'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </form>

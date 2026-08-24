@@ -242,6 +242,60 @@ const saveCompletedSheet = async (sheetId) => {
 };
 
 
+
+const getResetStatus = async (sheetId) => {
+  const sheet = await getSheetById(sheetId);
+  const RecoverySheet = getRecoverySheetModel();
+  const generatedRecoverySheet = await RecoverySheet.findOne({
+    rawRecoverySheetId: sheet._id,
+  }).select('_id');
+
+  return {
+    hasGeneratedRecoverySheet: Boolean(generatedRecoverySheet),
+    recoverySheetId: generatedRecoverySheet?._id || null,
+  };
+};
+
+const resetSheetData = async (sheetId, { deleteGeneratedRecovery = false } = {}) => {
+  const sheet = await getSheetById(sheetId);
+  const RecoverySheet = getRecoverySheetModel();
+
+  const generatedRecoverySheet = await RecoverySheet.findOne({
+    rawRecoverySheetId: sheet._id,
+  }).select('_id');
+
+  // Never silently delete a generated Recovery Sheet. The Admin must explicitly
+  // confirm the destructive combined action from the UI.
+  if (generatedRecoverySheet && !deleteGeneratedRecovery) {
+    const error = createHttpError(409, 'Recovery Sheet Already Exists');
+    error.code = 'RECOVERY_SHEET_EXISTS';
+    error.recoverySheetId = generatedRecoverySheet._id;
+    throw error;
+  }
+
+  let recoveryDeleted = false;
+  if (generatedRecoverySheet && deleteGeneratedRecovery) {
+    const deleteResult = await RecoverySheet.deleteOne({
+      _id: generatedRecoverySheet._id,
+    });
+    recoveryDeleted = deleteResult.deletedCount > 0;
+  }
+
+  // Preserve Packaging Date, Vendor, Line Number and the current row structure,
+  // while clearing all scan/status/timestamp data.
+  sheet.rows.forEach((row) => {
+    row.status = 'Not Started';
+    row.barcodes = [];
+    row.startedAt = null;
+    row.completedAt = null;
+  });
+
+  sheet.savedAt = null;
+  await sheet.save();
+
+  return { sheet, recoveryDeleted };
+};
+
 const editSavedSheet = async (sheetId) => {
   const sheet = await getSheetById(sheetId);
 
@@ -452,6 +506,8 @@ module.exports = {
   addBarcode,
   completeRow,
   saveCompletedSheet,
+  getResetStatus,
+  resetSheetData,
   editSavedSheet,
   reopenRow,
   removeBarcode,

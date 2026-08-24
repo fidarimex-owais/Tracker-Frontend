@@ -74,6 +74,25 @@ const saveSheet = async (req, res) => {
 };
 
 
+const getResetStatus = async (req, res) => {
+  const data = await service.getResetStatus(req.params.id);
+  res.json({ success: true, data });
+};
+
+const resetSheet = async (req, res) => {
+  const data = await service.resetSheetData(req.params.id, {
+    deleteGeneratedRecovery: req.body?.deleteGeneratedRecovery === true,
+  });
+
+  res.json({
+    success: true,
+    message: data.recoveryDeleted
+      ? 'Generated Recovery Sheet deleted and Raw Recovery Sheet reset successfully'
+      : 'Raw Recovery Sheet reset successfully',
+    data,
+  });
+};
+
 const editSheet = async (req, res) => {
   const data = await service.editSavedSheet(req.params.id);
 
@@ -159,6 +178,8 @@ module.exports = {
   scanBarcode,
   completeRow,
   saveSheet,
+  getResetStatus,
+  resetSheet,
   editSheet,
   reopenRow,
   removeBarcode,

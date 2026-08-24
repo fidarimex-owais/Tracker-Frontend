@@ -18,7 +18,7 @@ const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0
 
 const BRAND_OPTIONS = [
   'Hi Banana',
-  'Rajmata',
+  'Joker',
   'Banana Man',
 ];
 

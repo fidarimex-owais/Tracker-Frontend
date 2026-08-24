@@ -86,6 +86,23 @@ router.patch(
   asyncHandler(controller.saveSheet)
 );
 
+router.get(
+  '/:id/reset-status',
+  authorize('admin'),
+  validateSheetId,
+  asyncHandler(controller.getResetStatus)
+);
+
+// Reset is Admin-only. If a generated Recovery Sheet exists, the service
+// refuses to reset unless the Admin explicitly confirms deleting it as part
+// of the same request.
+router.patch(
+  '/:id/reset',
+  authorize('admin'),
+  validateSheetId,
+  asyncHandler(controller.resetSheet)
+);
+
 router.patch(
   '/:id/edit',
   authorize('admin', 'subadmin'),

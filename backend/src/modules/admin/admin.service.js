@@ -544,7 +544,7 @@ const updateBrand = async (
   if (!BRAND_OPTIONS.includes(brandName)) {
     throw createHttpError(
       400,
-      'Select Hi Banana, Rajmata, or Banana Man'
+      'Select Hi Banana, Joker, or Banana Man'
     );
   }
 
