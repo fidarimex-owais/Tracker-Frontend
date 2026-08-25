@@ -1,3 +1,5 @@
+//frontend/src/services/authService.js
+
 import api, { setAuthToken } from './api';
 
 const normalize = (error, fallback) => {

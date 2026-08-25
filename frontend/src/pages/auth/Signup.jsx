@@ -1,3 +1,5 @@
+// frontend/src/pages/auth/Signup.jsx
+
 import { useState } from 'react';
 import {
   Link,

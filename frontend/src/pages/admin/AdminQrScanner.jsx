@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/AdminQrScanner.jsx
+
 import { useEffect, useRef, useState } from 'react';
 
 import { resolveQrScan } from '../../services/scanningService';

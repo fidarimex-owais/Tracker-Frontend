@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/QrBrandDetails.jsx
+
 import { useEffect, useMemo, useState } from 'react';
 import {
   deleteQrBrandRecord,

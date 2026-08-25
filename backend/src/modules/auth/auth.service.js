@@ -1,3 +1,5 @@
+// Authentication service dependencies
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -18,7 +20,11 @@ const {
 
 const { verifyGoogleIdToken } = require('./googleIdentity.service');
 
+// Password hashing configuration
+
 const SALT_ROUNDS = 12;
+
+// Build safe user and signup-request responses
 
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
@@ -50,6 +56,8 @@ const createHttpError = (statusCode, message) => {
   return error;
 };
 
+// Verify account status, role, and required brand assignment
+
 const assertUserCanAccessPortal = (user, requestedRole) => {
   if (!user || user.role !== requestedRole) {
     throw createHttpError(401, 'Invalid role or account');
@@ -69,6 +77,8 @@ const assertUserCanAccessPortal = (user, requestedRole) => {
     );
   }
 };
+
+// Create a pending Vendor or Supervisor signup request
 
 const signup = async ({
   brandName,
@@ -136,6 +146,8 @@ const signup = async ({
   return sanitizeSignupRequest(request);
 };
 
+// Authenticate users with email and password
+
 const login = async ({ role, email, password }) => {
   const user = await findUserByEmail(email, {
     includePassword: true,
@@ -155,6 +167,8 @@ const login = async ({ role, email, password }) => {
 
   return sanitizeUser(user);
 };
+
+// Authenticate registered Vendor or Supervisor accounts with Google
 
 const googleLogin = async ({ role, credential }) => {
   if (!['vendor', 'supervisor'].includes(role)) {
@@ -179,6 +193,8 @@ const googleLogin = async ({ role, credential }) => {
   return sanitizeUser(user);
 };
 
+// Retrieve and validate an authenticated user
+
 const getUserById = async (id) => {
   const user = await findUserById(id);
 
@@ -202,6 +218,8 @@ const getUserById = async (id) => {
 
   return sanitizeUser(user);
 };
+
+// Create and verify JWT authentication tokens
 
 const signToken = (user) => {
   const secret = process.env.JWT_SECRET;
@@ -230,6 +248,8 @@ const verifyToken = (token) => {
 
   return jwt.verify(token, secret);
 };
+
+// Create or repair the bootstrap Admin account from environment variables
 
 const ensureAdminUser = async () => {
   await ensureCredentialCollection();
@@ -301,6 +321,8 @@ const ensureAdminUser = async () => {
   );
 };
 
+
+// Export authentication service functions
 
 module.exports = {
   signup,

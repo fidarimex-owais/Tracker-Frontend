@@ -1,3 +1,5 @@
+// Barcode service dependencies and supported hand values
+
 const crypto = require('crypto');
 const {
   getBarcodeModelForPackageDate,
@@ -5,6 +7,8 @@ const {
 
 const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const HAND_VALUES = [4, 5, 6, 8];
+
+// Generate the random portion of a barcode ID
 
 const randomSevenChars = () => {
   let result = '';
@@ -20,6 +24,8 @@ const randomSevenChars = () => {
  * Generates unique IDs within one generated sticker batch using the same
  * format as the existing project: <7 random alphanumeric chars>-<hands>.
  */
+// Generate unique barcode IDs for a hand category
+
 const generateBarcodeIds = (numberOfHands, count) => {
   if (!HAND_VALUES.includes(numberOfHands)) {
     throw new Error(`Unsupported numberOfHands: ${numberOfHands}`);
@@ -54,6 +60,8 @@ const generateBarcodeIds = (numberOfHands, count) => {
   return ids;
 };
 
+// Build hand quantities from a QR-generation line
+
 const buildQuantities = (line) => {
   const quantities = {
     4: 0,
@@ -69,6 +77,8 @@ const buildQuantities = (line) => {
   return quantities;
 };
 
+// Convert generated sticker data into barcode categories
+
 const buildBarcodeData = (line) =>
   line.qrCodes.map((category) => ({
     numberOfHands: category.numberOfHands,
@@ -76,6 +86,8 @@ const buildBarcodeData = (line) =>
     qrUniqueId: category._id.toString(),
     barcodes: category.stickers.map((sticker) => sticker.barcodeId),
   }));
+
+// Build the barcode database representation of a QR line
 
 const buildBarcodeLine = ({
   line,
@@ -114,6 +126,8 @@ const buildBarcodeLine = ({
  *         -> lines[] with any natural-number lineNumber (1, 2, 3, ...)
  *            -> barcodeData[]
  */
+// Synchronize a generated QR line into the barcode database
+
 const syncLineToBarcodeDatabase = async ({
   packageDate,
   vendorName,
@@ -161,6 +175,8 @@ const syncLineToBarcodeDatabase = async ({
  * Removes a stale mirrored line, for example if an existing QR line is
  * updated and its vendorName changes.
  */
+// Remove a mirrored barcode line when source QR data changes
+
 const removeBarcodeLine = async ({
   packageDate,
   vendorName,
@@ -184,6 +200,8 @@ const removeBarcodeLine = async ({
 
   await vendorDocument.save();
 };
+
+// Export barcode service functions
 
 module.exports = {
   generateBarcodeIds,

@@ -1,4 +1,8 @@
+// Raw Recovery request validation helpers
+
 const mongoose = require('mongoose');
+
+// Accept and normalize supported packaging-date formats
 
 const normalizePackagingDate = (value) => {
   const raw = String(value || '').trim();
@@ -37,6 +41,8 @@ const normalizePackagingDate = (value) => {
   return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 };
 
+// Parse positive integer values used for lines and rows
+
 const parseNaturalNumber = (value) => {
   const parsed = Number(value);
 
@@ -46,6 +52,8 @@ const parseNaturalNumber = (value) => {
 
   return parsed;
 };
+
+// Validate data required to create a Raw Recovery Sheet
 
 const validateCreateSheet = (req, res, next) => {
   const packagingDate = normalizePackagingDate(req.body?.packagingDate);
@@ -91,6 +99,8 @@ const validateCreateSheet = (req, res, next) => {
   return next();
 };
 
+// Validate Raw Recovery Sheet MongoDB IDs
+
 const validateSheetId = (req, res, next) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({
@@ -101,6 +111,8 @@ const validateSheetId = (req, res, next) => {
 
   return next();
 };
+
+// Validate row numbers from route parameters
 
 const validateRowNumber = (req, res, next) => {
   const rowNumber = parseNaturalNumber(req.params.rowNumber);
@@ -115,6 +127,8 @@ const validateRowNumber = (req, res, next) => {
   req.rowNumber = rowNumber;
   return next();
 };
+
+// Validate barcode format and derive its hand category
 
 const validateBarcodeScan = (req, res, next) => {
   const barcodeId = String(req.body?.barcodeId || '').trim();
@@ -158,6 +172,8 @@ const validateBarcodeScan = (req, res, next) => {
   return next();
 };
 
+// Validate sheet lookup filters
+
 const validateLookupQuery = (req, res, next) => {
   const packagingDate = normalizePackagingDate(req.query?.packagingDate);
   const vendorName = String(req.query?.vendorName || '').trim();
@@ -179,6 +195,8 @@ const validateLookupQuery = (req, res, next) => {
   return next();
 };
 
+// Validate packaging date queries
+
 const validatePackagingDateQuery = (req, res, next) => {
   const packagingDate = normalizePackagingDate(req.query?.packagingDate);
 
@@ -192,6 +210,8 @@ const validatePackagingDateQuery = (req, res, next) => {
   req.packagingDate = packagingDate;
   return next();
 };
+
+// Validate vendor and packaging-date line queries
 
 const validateLinesQuery = (req, res, next) => {
   const packagingDate = normalizePackagingDate(req.query?.packagingDate);
@@ -211,6 +231,8 @@ const validateLinesQuery = (req, res, next) => {
 
   return next();
 };
+
+// Export Raw Recovery validation middleware
 
 module.exports = {
   normalizePackagingDate,

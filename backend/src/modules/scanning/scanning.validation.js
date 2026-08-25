@@ -1,7 +1,11 @@
+// MongoDB ObjectId format used by generated QR codes
+
 const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/;
 
 const normalizeId = (value) =>
   typeof value === 'string' ? value.trim() : '';
+
+// Extract the parent MongoDB ID from a scanned QR value
 
 const extractIdFromQrValue = (value) => {
   if (value && typeof value === 'object') {
@@ -26,6 +30,8 @@ const extractIdFromQrValue = (value) => {
     return '';
   }
 };
+
+// Validate and normalize direct or scanned QR record IDs
 
 const validateRecordId = (req, res, next) => {
   const directId = normalizeId(req.body?._id);
@@ -65,6 +71,8 @@ const validateRecordId = (req, res, next) => {
 
   return next();
 };
+
+// Export QR scanning validation helpers
 
 module.exports = {
   validateRecordId,

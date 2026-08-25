@@ -1,3 +1,5 @@
+// Raw Recovery route dependencies
+
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
@@ -13,6 +15,8 @@ const {
   validateLinesQuery,
 } = require('./rawRecovery.validation');
 
+// Create Raw Recovery routes and apply portal access rules
+
 const router = express.Router();
 
 // Barcode Scanner is available to every authenticated portal role.
@@ -22,11 +26,15 @@ router.use(
   authorize('admin', 'subadmin', 'vendor', 'supervisor')
 );
 
+// Load vendors available for the selected packaging date
+
 router.get(
   '/vendors',
   validatePackagingDateQuery,
   asyncHandler(controller.listVendors)
 );
+
+// Load line numbers for the selected vendor
 
 router.get(
   '/lines',
@@ -34,11 +42,15 @@ router.get(
   asyncHandler(controller.listLines)
 );
 
+// Find an existing Raw Recovery Sheet
+
 router.get(
   '/lookup',
   validateLookupQuery,
   asyncHandler(controller.lookupSheet)
 );
+
+// Create a new Raw Recovery Sheet
 
 router.post(
   '/',
@@ -80,6 +92,8 @@ router.patch(
   asyncHandler(controller.completeRow)
 );
 
+// Save a fully completed sheet and generate Recovery Sheet data
+
 router.patch(
   '/:id/save',
   validateSheetId,
@@ -102,6 +116,8 @@ router.patch(
   validateSheetId,
   asyncHandler(controller.resetSheet)
 );
+
+// Allow Admin/Sub-admin to unlock a saved sheet for editing
 
 router.patch(
   '/:id/edit',
@@ -130,5 +146,7 @@ router.delete(
   validateRowNumber,
   asyncHandler(controller.removeRow)
 );
+
+// Export Raw Recovery router
 
 module.exports = router;

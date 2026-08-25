@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/UserManagement.jsx
+
 import {
   useEffect,
   useMemo,

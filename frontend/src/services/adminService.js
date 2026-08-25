@@ -1,3 +1,5 @@
+// frontend/src/services/adminService.js
+
 import api from './api';
 
 export const SIGNUP_REQUESTS_CHANGED_EVENT =

@@ -1,3 +1,5 @@
+// frontend/src/components/PortalHomeRedirect.jsx
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { roleHome } from '../auth/roleHome';

@@ -1,3 +1,5 @@
+// Recovery Sheet route dependencies
+
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
@@ -9,6 +11,8 @@ const {
   validateRecoveryLookupQuery,
 } = require('./recovery.validation');
 
+// Create Recovery Sheet routes and apply portal permissions
+
 const router = express.Router();
 
 // Recovery Sheet access: Admin, Sub-Admin and Vendor only.
@@ -18,10 +22,14 @@ router.use(
   authorize('admin', 'subadmin', 'vendor')
 );
 
+// List Recovery Sheets available to the current role
+
 router.get(
   '/options',
   asyncHandler(controller.listRecoverySheetOptions)
 );
+
+// Find a Recovery Sheet by date, vendor and line
 
 router.get(
   '/lookup',
@@ -29,11 +37,15 @@ router.get(
   asyncHandler(controller.findRecoverySheet)
 );
 
+// Check whether a Raw Recovery Sheet can be generated
+
 router.get(
   '/status/:rawSheetId',
   validateRawRecoverySheetId,
   asyncHandler(controller.getGenerationStatus)
 );
+
+// Generate a Recovery Sheet from completed Raw Recovery data
 
 router.post(
   '/generate/:rawSheetId',
@@ -47,6 +59,8 @@ router.get(
   asyncHandler(controller.getRecoverySheetByRawId)
 );
 
+// Allow Admin to permanently delete a generated Recovery Sheet
+
 router.delete(
   '/:id',
   authorize('admin'),
@@ -59,5 +73,7 @@ router.get(
   validateRecoverySheetId,
   asyncHandler(controller.getRecoverySheet)
 );
+
+// Export Recovery Sheet router
 
 module.exports = router;

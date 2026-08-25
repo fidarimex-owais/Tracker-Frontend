@@ -1,3 +1,5 @@
+// Validation patterns and supported authentication options
+
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
 
@@ -24,9 +26,13 @@ const GOOGLE_LOGIN_ROLE_OPTIONS = [
   'supervisor',
 ];
 
+// Email validation helpers
+
 const isValidEmail = (email) => EMAIL_RE.test(email);
 const isValidGmail = (email) =>
   isValidEmail(email) && email.endsWith('@gmail.com');
+
+// Validate standard email/password login requests
 
 const validateCredentials = (req, res, next) => {
   const role =
@@ -87,6 +93,8 @@ const validateCredentials = (req, res, next) => {
   return next();
 };
 
+// Validate Google Sign-In requests
+
 const validateGoogleCredentials = (req, res, next) => {
   const role =
     typeof req.body?.role === 'string'
@@ -132,6 +140,8 @@ const validateGoogleCredentials = (req, res, next) => {
 
   return next();
 };
+
+// Validate and normalize public signup requests
 
 const validateSignupRequest = (req, res, next) => {
   const role =
@@ -255,6 +265,8 @@ const validateSignupRequest = (req, res, next) => {
 
   return next();
 };
+
+// Export authentication validation helpers
 
 module.exports = {
   BRAND_OPTIONS,

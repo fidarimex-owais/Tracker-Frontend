@@ -1,3 +1,5 @@
+// API route dependencies
+
 const express = require('express');
 const authRoutes = require('../modules/auth/auth.routes');
 const adminRoutes = require('../modules/admin/admin.routes');
@@ -10,7 +12,11 @@ const rawRecoveryRoutes = require('../modules/rawRecovery/rawRecovery.routes');
 const recoveryRoutes = require('../modules/recovery/recovery.routes');
 const qrBrandDetailsRoutes = require('../modules/qrBrandDetails/qrBrandDetails.routes');
 
+// Create the main API router
+
 const router = express.Router();
+
+// Mount module routes under their API paths
 
 router.use('/auth', authRoutes);
 router.use('/admin', adminRoutes);
@@ -22,5 +28,7 @@ router.use('/scanning', scanningRoutes);
 router.use('/raw-recovery-sheets', rawRecoveryRoutes);
 router.use('/recovery-sheets', recoveryRoutes);
 router.use('/qr-brand-details', qrBrandDetailsRoutes);
+
+// Export the configured API router
 
 module.exports = router;

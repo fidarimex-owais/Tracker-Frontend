@@ -1,3 +1,5 @@
+// frontend/src/auth/AuthContext.jsx
+
 import { useEffect, useMemo, useState } from 'react';
 import * as authService from '../services/authService';
 import AuthContext from './auth-context';

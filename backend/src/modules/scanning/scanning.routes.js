@@ -1,3 +1,5 @@
+// QR scanning route dependencies
+
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
@@ -6,6 +8,8 @@ const controller = require('./scanning.controller');
 const {
   validateRecordId,
 } = require('./scanning.validation');
+
+// Create the QR scanning router
 
 const router = express.Router();
 
@@ -22,6 +26,8 @@ const router = express.Router();
  * Both request forms resolve to the same parent record in qr_brand_details and
  * return the complete matching document.
  */
+// Allow Admin and Sub-admin to scan and retrieve QR record data
+
 router.post(
   '/qr',
   authMiddleware,
@@ -29,5 +35,7 @@ router.post(
   validateRecordId,
   asyncHandler(controller.scanQr)
 );
+
+// Export scanning router
 
 module.exports = router;

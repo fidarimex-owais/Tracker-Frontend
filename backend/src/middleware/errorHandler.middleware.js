@@ -1,3 +1,5 @@
+// Centralized application error handler
+
 const errorHandler = (err, req, res, next) => {
   console.error(err.stack || err);
 
@@ -20,5 +22,7 @@ const errorHandler = (err, req, res, next) => {
     message: err.message || 'Internal Server Error',
   });
 };
+
+// Export error-handling middleware
 
 module.exports = errorHandler;

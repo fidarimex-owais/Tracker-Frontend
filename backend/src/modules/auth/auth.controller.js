@@ -1,4 +1,8 @@
+// Authentication service layer
+
 const authService = require('./auth.service');
+
+// Configure session or persistent authentication cookies
 
 const cookieOptions = (rememberMe = false) => {
   const options = {
@@ -19,6 +23,8 @@ const cookieOptions = (rememberMe = false) => {
   return options;
 };
 
+// Submit a public signup request
+
 const signup = async (req, res) => {
   const request = await authService.signup(req.body);
 
@@ -29,6 +35,8 @@ const signup = async (req, res) => {
     request,
   });
 };
+
+// Set the authentication cookie and return the signed-in user
 
 const sendAuthenticatedResponse = (
   res,
@@ -52,6 +60,8 @@ const sendAuthenticatedResponse = (
   });
 };
 
+// Standard login handler
+
 const login = async (req, res) => {
   const user = await authService.login(req.body);
 
@@ -62,6 +72,8 @@ const login = async (req, res) => {
     req.body.rememberMe
   );
 };
+
+// Google Sign-In handler
 
 const googleLogin = async (req, res) => {
   const user = await authService.googleLogin(req.body);
@@ -74,6 +86,8 @@ const googleLogin = async (req, res) => {
   );
 };
 
+// Clear the authentication session
+
 const logout = async (req, res) => {
   res.clearCookie('auth_token', cookieOptions(false));
 
@@ -83,12 +97,16 @@ const logout = async (req, res) => {
   });
 };
 
+// Return the currently authenticated user
+
 const me = async (req, res) => {
   res.json({
     success: true,
     user: req.user,
   });
 };
+
+// Export authentication controller handlers
 
 module.exports = {
   signup,

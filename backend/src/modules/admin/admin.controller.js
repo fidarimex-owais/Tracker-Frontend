@@ -1,4 +1,8 @@
+// Admin service layer
+
 const service = require('./admin.service');
+
+// Dashboard and user-management request handlers
 
 const getDashboard = async (req, res) => {
   const data = await service.getDashboardOverview(req.user);
@@ -30,6 +34,8 @@ const listActiveIds = async (req, res) => {
     users,
   });
 };
+
+// Signup request review handlers
 
 const listSignupRequests = async (req, res) => {
   const requests = await service.listSignupRequests(
@@ -78,6 +84,8 @@ const rejectSignupRequest = async (req, res) => {
     request,
   });
 };
+
+// User management handlers
 
 const listUsers = async (req, res) => {
   const users = await service.listUsers(req.user);
@@ -131,6 +139,8 @@ const updateStatus = async (req, res) => {
 };
 
 
+// Delete a user account when the current role has permission
+
 const deleteUser = async (req, res) => {
   const user = await service.deleteUser(
     req.params.id,
@@ -143,6 +153,8 @@ const deleteUser = async (req, res) => {
     user,
   });
 };
+
+// Export Admin controller handlers
 
 module.exports = {
   getDashboard,

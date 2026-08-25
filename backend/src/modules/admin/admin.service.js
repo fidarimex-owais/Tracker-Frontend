@@ -1,3 +1,5 @@
+// Admin service dependencies and related data models
+
 const bcrypt = require('bcryptjs');
 
 const {
@@ -37,6 +39,8 @@ const {
   getRecoverySheetModel,
 } = require('../recovery/recovery.model');
 
+// Account creation and role-permission configuration
+
 const SALT_ROUNDS = 12;
 
 const CREATABLE_ROLES_BY_ACTOR = {
@@ -62,6 +66,8 @@ const DELETABLE_ROLES_BY_ACTOR = {
   vendor: ['supervisor'],
   supervisor: [],
 };
+
+// Convert database records into safe API response objects
 
 const sanitizePortalUser = (user) => ({
   id: user._id.toString(),
@@ -139,6 +145,8 @@ const resolveCreatedUserBrand = (
 
   return requestedBrand;
 };
+
+// Create portal users according to the current actor's permissions
 
 const createUser = async (
   {
@@ -230,6 +238,8 @@ const getSignupRequestCount = async (actor) => {
 
   return countPendingSignupRequestsForActor(actor);
 };
+
+// Approve or reject pending signup requests
 
 const approveSignupRequest = async (
   requestId,
@@ -435,6 +445,8 @@ const rejectSignupRequest = async (
   return sanitizeSignupRequest(rejectedRequest);
 };
 
+// User listing and account-management operations
+
 const listUsers = async (actor) => {
   let roles;
   let brandName = '';
@@ -620,6 +632,8 @@ const updateStatus = async (
 };
 
 
+// Permanently delete users when permitted by the role hierarchy
+
 const deleteUser = async (
   userId,
   actor
@@ -667,6 +681,8 @@ const deleteUser = async (
 
   return deletedUser;
 };
+
+// Shared authorization checks for user-management actions
 
 const ensureActorCanManageTarget = (actor, target) => {
   if (actor.role === 'admin') {
@@ -787,6 +803,8 @@ const throwRequestDecisionError = async (
     'This signup request is no longer available. Refresh and try again.'
   );
 };
+
+// Dashboard statistics and reporting helpers
 
 const countGeneratedQrRecords = async () => {
   const totals = await Promise.all(
@@ -964,6 +982,8 @@ const buildBrandSummary = (users) => {
 
   return summary;
 };
+
+// Build role-specific dashboard summaries
 
 const getAdminDashboardOverview = async (actor) => {
   const [
@@ -1152,6 +1172,8 @@ const getSupervisorDashboardOverview = async (actor) => {
   };
 };
 
+// Return the appropriate dashboard data for the signed-in role
+
 const getDashboardOverview = async (actor) => {
   if (actor.role === 'admin') {
     return getAdminDashboardOverview(actor);
@@ -1175,6 +1197,8 @@ const getDashboardOverview = async (actor) => {
   );
 };
 
+// General service helpers
+
 const formatRole = (role) => {
   if (role === 'subadmin') {
     return 'Sub-Admin';
@@ -1195,6 +1219,8 @@ const createHttpError = (
   error.statusCode = statusCode;
   return error;
 };
+
+// Export Admin service functions
 
 module.exports = {
   CREATABLE_ROLES_BY_ACTOR,

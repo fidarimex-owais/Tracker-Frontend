@@ -1,5 +1,9 @@
+// Recovery Sheet model dependencies
+
 const mongoose = require('mongoose');
 const { getRecoveryDb } = require('../../config/db');
+
+// Store calculated hand totals and recovery percentage for one row
 
 const recoveryRowSchema = new mongoose.Schema(
   {
@@ -52,6 +56,8 @@ const recoveryRowSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+// Store a generated Recovery Sheet and its source Raw Recovery Sheet
 
 const recoverySheetSchema = new mongoose.Schema(
   {
@@ -120,6 +126,8 @@ const recoverySheetSchema = new mongoose.Schema(
   }
 );
 
+// Prevent duplicate generated sheets for the same date, vendor and line
+
 recoverySheetSchema.index(
   {
     packagingDate: 1,
@@ -134,6 +142,8 @@ recoverySheetSchema.index(
 
 const MODEL_NAME = 'RecoverySheet';
 
+// Resolve the generated Recovery Sheet model
+
 const getRecoverySheetModel = () => {
   const db = getRecoveryDb();
 
@@ -147,6 +157,8 @@ const getRecoverySheetModel = () => {
     'recovery_sheets'
   );
 };
+
+// Export Recovery Sheet model helper
 
 module.exports = {
   getRecoverySheetModel,

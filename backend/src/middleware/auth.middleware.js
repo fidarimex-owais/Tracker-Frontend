@@ -1,4 +1,8 @@
+// Authentication middleware dependencies
+
 const authService = require('../modules/auth/auth.service');
+
+// Validate the user's session and attach the authenticated user to the request
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -19,5 +23,7 @@ const authMiddleware = async (req, res, next) => {
     return res.status(status).json({ success: false, message: status === 401 ? 'Invalid or expired session' : error.message });
   }
 };
+
+// Export authentication middleware
 
 module.exports = authMiddleware;

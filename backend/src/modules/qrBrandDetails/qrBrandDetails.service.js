@@ -1,3 +1,5 @@
+// QR Brand Details service dependencies
+
 const mongoose = require('mongoose');
 const {
   ALL_BRANDS,
@@ -83,6 +85,8 @@ const getRequestedBrands = (brandName) => {
   return [requestedBrand];
 };
 
+// Normalize supported QR Brand Detail filters
+
 const normalizeFilters = (query = {}) => ({
   packageDate: normalizeDateOnly(query.packageDate),
   brandName: normalizeText(query.brandName),
@@ -91,6 +95,8 @@ const normalizeFilters = (query = {}) => ({
   vendorName: normalizeText(query.vendorName),
   qrCodeId: normalizeText(query.qrCodeId),
 });
+
+// Check whether a QR line matches the active filters
 
 const lineMatches = ({ document, line, filters }) => {
   if (
@@ -126,6 +132,8 @@ const lineMatches = ({ document, line, filters }) => {
   return true;
 };
 
+// Build 4/5/6/8-Hand quantity details for a card
+
 const buildHandDetails = (line) => {
   const byHand = new Map(
     (line.qrCodes || []).map((qrCode) => [
@@ -139,6 +147,8 @@ const buildHandDetails = (line) => {
     quantity: byHand.get(numberOfHands) || 0,
   }));
 };
+
+// Convert stored package lines into display-ready records
 
 const flattenDocument = ({ document, brandName, filters }) => {
   const records = [];
@@ -180,6 +190,8 @@ const flattenDocument = ({ document, brandName, filters }) => {
 
   return records;
 };
+
+// Build the MongoDB query for supported filters
 
 const buildDocumentQuery = (filters) => {
   const query = {};
@@ -223,6 +235,8 @@ const buildDocumentQuery = (filters) => {
 
   return query;
 };
+
+// Retrieve, sort and paginate QR Brand Detail records
 
 const listDetails = async (query = {}) => {
   const filters = normalizeFilters(query);
@@ -285,6 +299,8 @@ const listDetails = async (query = {}) => {
   };
 };
 
+// Collect available vendor, supervisor and line filter values
+
 const listOptions = async (query = {}) => {
   const filters = normalizeFilters(query);
   const brands = getRequestedBrands(filters.brandName);
@@ -328,6 +344,8 @@ const listOptions = async (query = {}) => {
     lineNumbers: [...lineNumbers].sort((a, b) => a - b),
   };
 };
+
+// Delete a QR line and keep mirrored barcode data synchronized
 
 const deleteRecord = async ({
   brandName,
@@ -405,6 +423,8 @@ const deleteRecord = async ({
     packageDeleted: document.lines.length === 0,
   };
 };
+
+// Export QR Brand Details service functions
 
 module.exports = {
   listDetails,

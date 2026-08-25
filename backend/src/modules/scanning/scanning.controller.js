@@ -1,4 +1,8 @@
+// QR scanning controller dependency
+
 const scanningService = require('./scanning.service');
+
+// Retrieve QR data for the validated scanned record ID
 
 const scanQr = async (req, res) => {
   const data = await scanningService.scanQr(
@@ -11,6 +15,8 @@ const scanQr = async (req, res) => {
     data,
   });
 };
+
+// Export QR scanning controller handlers
 
 module.exports = {
   scanQr,

@@ -1,5 +1,9 @@
+// Records controller dependencies
+
 const recordsService = require('./records.service');
 const stickerService = require('../sticker/sticker.service');
+
+// Create a QR record line or return an existing-line conflict
 
 const createRecord = async (req, res) => {
   const result = await recordsService.submitLine(req.body);
@@ -26,6 +30,8 @@ const createRecord = async (req, res) => {
   });
 };
 
+// Resolve duplicate line conflicts by reusing or updating data
+
 const resolveConflict = async (req, res) => {
   const result = await recordsService.resolveConflict(req.body);
 
@@ -44,6 +50,8 @@ const resolveConflict = async (req, res) => {
  * frontend. Records retrieves the persisted data; sticker.service owns the
  * rendering/ZIP work.
  */
+// Download persisted QR/barcode stickers as a ZIP
+
 const downloadZip = async (req, res) => {
   const query = parseDeliveryQuery(req.query);
   const category = await recordsService.getCategoryForDelivery(query);
@@ -56,6 +64,8 @@ const downloadZip = async (req, res) => {
   });
 };
 
+// Build the printable sticker preview
+
 const printPreview = async (req, res) => {
   const query = parseDeliveryQuery(req.query);
   const category = await recordsService.getCategoryForDelivery(query);
@@ -64,6 +74,8 @@ const printPreview = async (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   return res.send(html);
 };
+
+// Validate and normalize sticker delivery query parameters
 
 const parseDeliveryQuery = ({ brandName, packageDate, lineNumber, numberOfHands }) => {
   if (!brandName || !packageDate || !lineNumber || !numberOfHands) {
@@ -103,6 +115,8 @@ const parseDeliveryQuery = ({ brandName, packageDate, lineNumber, numberOfHands 
     numberOfHands: parsedNumberOfHands,
   };
 };
+
+// Export records controller handlers
 
 module.exports = {
   createRecord,

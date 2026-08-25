@@ -1,4 +1,8 @@
+// Barcode rendering dependency
+
 const bwipjs = require('bwip-js');
+
+// Render a Code 128 barcode as SVG
 
 const renderBarcodeSvg = (barcodeId) =>
   bwipjs.toSVG({
@@ -9,6 +13,8 @@ const renderBarcodeSvg = (barcodeId) =>
     includetext: false,
   });
 
+// Extract reusable SVG content for embedding
+
 const renderBarcodeForEmbed = (barcodeId) => {
   const svg = renderBarcodeSvg(barcodeId);
   const match = svg.match(/<svg[^>]*viewBox="([^"]*)"[^>]*>([\s\S]*)<\/svg>/);
@@ -18,6 +24,8 @@ const renderBarcodeForEmbed = (barcodeId) => {
     innerSvg: match ? match[2] : '',
   };
 };
+
+// Export barcode rendering helpers
 
 module.exports = {
   renderBarcodeSvg,

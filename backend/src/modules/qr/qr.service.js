@@ -1,4 +1,8 @@
+// QR generation dependency
+
 const QRCode = require('qrcode');
+
+// Normalize and validate data before QR generation
 
 const normalizeQrPayload = (payload) => {
   if (payload === undefined || payload === null || payload === '') {
@@ -21,6 +25,8 @@ const normalizeQrPayload = (payload) => {
   }
 };
 
+// Generate a QR code as a PNG buffer
+
 const generateQrPngBuffer = async (payload, options = {}) => {
   const qrText = normalizeQrPayload(payload);
 
@@ -31,10 +37,14 @@ const generateQrPngBuffer = async (payload, options = {}) => {
   });
 };
 
+// Generate a Base64 representation of the QR image
+
 const generateQrBase64 = async (payload, options = {}) => {
   const pngBuffer = await generateQrPngBuffer(payload, options);
   return pngBuffer.toString('base64');
 };
+
+// Export QR generation helpers
 
 module.exports = {
   normalizeQrPayload,

@@ -1,3 +1,5 @@
+// Signup request model dependencies and role configuration
+
 const mongoose = require('mongoose');
 const { getUserDb } = require('../../config/db');
 const {
@@ -21,6 +23,8 @@ const REQUEST_ROLES_BY_APPROVER = {
   vendor: ['supervisor'],
   supervisor: [],
 };
+
+// Store the approval or rejection history for a signup request
 
 const decisionSchema = new mongoose.Schema(
   {
@@ -57,6 +61,8 @@ const decisionSchema = new mongoose.Schema(
     _id: false,
   }
 );
+
+// Pending signup request schema
 
 const signupRequestSchema = new mongoose.Schema(
   {
@@ -168,6 +174,8 @@ signupRequestSchema.index({
 const MODEL_NAME = 'SignupRequest';
 const COLLECTION_NAME = 'signup_requests';
 
+// Initialize and access the signup request collection
+
 const getSignupRequestModel = () => {
   const userDb = getUserDb();
 
@@ -181,6 +189,8 @@ const getSignupRequestModel = () => {
     COLLECTION_NAME
   );
 };
+
+// Resolve signup review permissions by role
 
 const getApproverRolesForRequestRole = (role) =>
   APPROVER_ROLES_BY_REQUEST_ROLE[role] || [];
@@ -217,6 +227,8 @@ const buildRequestBrandFilter = (brandName) => ({
     },
   ],
 });
+
+// Build the database filter for requests the current actor may review
 
 const buildReviewFilterForActor = (actor) => {
   const requestRoles = getRequestRolesForApprover(
@@ -271,6 +283,8 @@ const canActorReviewRequest = (actor, request) => {
   );
 };
 
+
+// Signup request lookup helpers
 
 const findSignupRequestByEmail = async (email) => {
   const normalizedEmail = String(email || '')
@@ -327,6 +341,8 @@ const findSignupRequestById = async (
   return query;
 };
 
+// List and count pending requests visible to the current actor
+
 const listPendingSignupRequestsForActor = async (actor) => {
   const reviewFilter = buildReviewFilterForActor(actor);
 
@@ -360,6 +376,8 @@ const countPendingSignupRequestsForActor = async (actor) => {
     ...reviewFilter,
   });
 };
+
+// Export signup request model helpers
 
 module.exports = {
   PUBLIC_SIGNUP_ROLES,

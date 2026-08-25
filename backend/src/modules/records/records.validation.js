@@ -1,3 +1,5 @@
+// Supported brands, vendors and hand categories
+
 const ALLOWED_BRANDS = ['Hi Banana', 'Joker', 'Banana Man'];
 const ALLOWED_VENDORS = ['Yogesh Korhale', 'Sachin Markad', 'Tannaji Kashid'];
 const HAND_CATEGORIES = [4, 5, 6, 8];
@@ -10,6 +12,8 @@ const isFiniteNumber = (value) =>
 
 const isValidISODate = (value) =>
   typeof value === 'string' && !Number.isNaN(Date.parse(value));
+
+// Business timezone used for Sub-admin date restrictions
 
 const BUSINESS_TIME_ZONE =
   process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
@@ -51,6 +55,8 @@ const toDateOnlyString = (value) => {
   return formatDateInBusinessTimeZone(parsedDate);
 };
 
+// Prevent Sub-admin QR generation for past packaging dates
+
 const enforceSubadminPackageDate = (req, res, next) => {
   if (req.user?.role !== 'subadmin') {
     return next();
@@ -86,6 +92,8 @@ const enforceSubadminPackageDate = (req, res, next) => {
 
   return next();
 };
+
+// Validate quantities for supported hand categories
 
 const validateQuantities = (quantities, errors) => {
   if (
@@ -137,6 +145,8 @@ const validateQuantities = (quantities, errors) => {
     });
   }
 };
+
+// Validate required QR record line fields
 
 const validateLineFields = (body, errors) => {
   if (!isNonEmptyString(body.brandName)) {
@@ -214,6 +224,8 @@ const validateLineFields = (body, errors) => {
   }
 };
 
+// Normalize missing hand quantities to zero
+
 const normalizeQuantities = (quantities) => {
   const normalized = {};
 
@@ -224,6 +236,8 @@ const normalizeQuantities = (quantities) => {
 
   return normalized;
 };
+
+// Validate and normalize new QR record submissions
 
 const validateSubmitLine = (req, res, next) => {
   const body = req.body || {};
@@ -258,6 +272,8 @@ const validateSubmitLine = (req, res, next) => {
 
   return next();
 };
+
+// Validate duplicate-line conflict resolution requests
 
 const validateResolveConflict = (req, res, next) => {
   const body = req.body || {};
@@ -343,6 +359,8 @@ const validateResolveConflict = (req, res, next) => {
 
   return next();
 };
+
+// Export QR record validation middleware
 
 module.exports = {
   validateSubmitLine,

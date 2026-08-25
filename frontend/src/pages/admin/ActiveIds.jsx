@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/ActiveIds.jsx
+
 import {
   useEffect,
   useState,

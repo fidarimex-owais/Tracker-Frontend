@@ -1,7 +1,11 @@
+// Sticker rendering and ZIP generation dependencies
+
 const { ZipArchive } = require('archiver');
 const sharp = require('sharp');
 const { generateQrBase64 } = require('../qr/qr.service');
 const { renderBarcodeForEmbed } = require('../barcode/barcode.render');
+
+// Define the dimensions and layout used by each sticker
 
 const getStickerDimensions = () => {
   const margin = 24;
@@ -29,6 +33,8 @@ const getStickerDimensions = () => {
     topSectionBottom,
   };
 };
+
+// Build the QR, hand number and barcode sticker as SVG
 
 const buildStickerSVG = async (qrPngBase64, numberOfHands, barcodeId) => {
   const dimensions = getStickerDimensions();
@@ -75,6 +81,8 @@ const buildStickerSVG = async (qrPngBase64, numberOfHands, barcodeId) => {
 </svg>`;
 };
 
+// Render the sticker SVG into a printable PNG
+
 const buildStickerPNG = async (
   qrPngBase64,
   numberOfHands,
@@ -90,12 +98,16 @@ const buildStickerPNG = async (
     .toBuffer();
 };
 
+// Build a safe ZIP filename for the selected hand category
+
 const buildZipFilename = (numberOfHands, brandName, packageDate) => {
   const dateString = new Date(packageDate).toISOString().slice(0, 10);
   const safeBrand = brandName.replace(/\s+/g, '');
 
   return `${numberOfHands}Hand_${dateString}_${safeBrand}.zip`;
 };
+
+// Generate all category stickers and stream them as a ZIP download
 
 const streamCategoryZip = async ({
   numberOfHands,
@@ -155,6 +167,8 @@ const streamCategoryZip = async ({
 
   return { zipFilename };
 };
+
+// Build the browser print page containing all generated stickers
 
 const buildPrintPageHTML = async ({
   qrPayload,
@@ -232,6 +246,8 @@ const buildPrintPageHTML = async ({
 </body>
 </html>`;
 };
+
+// Export sticker rendering and delivery functions
 
 module.exports = {
   getStickerDimensions,

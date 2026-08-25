@@ -1,3 +1,5 @@
+// QR brand record model dependencies
+
 const mongoose = require('mongoose');
 const { getBrandDb } = require('../../config/db');
 
@@ -9,6 +11,8 @@ const { getBrandDb } = require('../../config/db');
  * ├── banana_man
  * └── joker
  */
+
+// Store latitude and longitude for each QR record line
 
 const geolocationSchema = new mongoose.Schema(
   {
@@ -31,12 +35,16 @@ const geolocationSchema = new mongoose.Schema(
   }
 );
 
+// Store the generated barcode ID for an individual sticker
+
 const stickerSchema = new mongoose.Schema({
   barcodeId: {
     type: String,
     required: true,
   },
 });
+
+// Define hand category quantities and their generated stickers
 
 const qrCodeSchema = new mongoose.Schema(
   {
@@ -78,6 +86,8 @@ const qrCodeSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Store vendor, farmer, supervisor and QR data for one line
 
 const lineSchema = new mongoose.Schema(
   {
@@ -162,6 +172,8 @@ const lineSchema = new mongoose.Schema(
   }
 );
 
+// Store all lines for a brand on a packaging date
+
 const packageSchema = new mongoose.Schema(
   {
     brandName: {
@@ -202,6 +214,8 @@ packageSchema.index(
   }
 );
 
+// Map each supported brand to its MongoDB collection
+
 const BRAND_COLLECTION_MAP = {
   'Hi Banana': {
     modelName: 'HiBananaPackage',
@@ -221,6 +235,8 @@ const BRAND_COLLECTION_MAP = {
 
 const ALL_BRANDS =
   Object.keys(BRAND_COLLECTION_MAP);
+
+// Resolve the correct Mongoose model for the selected brand
 
 const getModelForBrand = (
   brandName
@@ -257,6 +273,8 @@ const getModelForBrand = (
     config.collectionName
   );
 };
+
+// Export brand model helpers and supported brands
 
 module.exports = {
   getModelForBrand,

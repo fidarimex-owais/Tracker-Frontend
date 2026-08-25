@@ -1,6 +1,10 @@
+// QR scanning service dependency
+
 const {
   findRecordDocumentById,
 } = require('./scanning.model');
+
+// Find and return the complete QR parent record
 
 const scanQr = async (recordId) => {
   const result = await findRecordDocumentById(recordId);
@@ -19,11 +23,15 @@ const scanQr = async (recordId) => {
   };
 };
 
+// Create an HTTP-aware service error
+
 const createHttpError = (statusCode, message) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
 };
+
+// Export scanning service functions
 
 module.exports = {
   scanQr,

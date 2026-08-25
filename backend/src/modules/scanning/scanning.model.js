@@ -1,3 +1,5 @@
+// QR scanning model dependencies
+
 const mongoose = require('mongoose');
 const {
   ALL_BRANDS,
@@ -10,6 +12,8 @@ const {
  *
  * No separate scanner collection is created.
  */
+// Search all brand collections for the scanned parent record
+
 const findRecordDocumentById = async (recordId) => {
   const objectId = new mongoose.Types.ObjectId(recordId);
 
@@ -28,6 +32,8 @@ const findRecordDocumentById = async (recordId) => {
 
   return null;
 };
+
+// Export QR scanning data-access helper
 
 module.exports = {
   findRecordDocumentById,

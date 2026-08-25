@@ -1,3 +1,5 @@
+// frontend/src/auth/roleHome.js
+
 export const roleHome = (role) => ({
   admin: '/admin',
   subadmin: '/sub-admin',

@@ -1,3 +1,5 @@
+// Restrict routes to authenticated users with an allowed role
+
 const authorize = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
@@ -7,5 +9,7 @@ const authorize = (...roles) => (req, res, next) => {
   }
   return next();
 };
+
+// Export role authorization middleware
 
 module.exports = authorize;

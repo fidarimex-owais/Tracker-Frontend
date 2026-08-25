@@ -1,3 +1,5 @@
+//frontend/src/services/qrBrandDetailsService.js
+
 import api from './api';
 
 const BASE_PATH = '/api/qr-brand-details';

@@ -1,9 +1,13 @@
+// Recovery Sheet service dependencies
+
 const {
   getRecoverySheetModel,
 } = require('./recovery.model');
 const {
   getRawRecoverySheetModel,
 } = require('../rawRecovery/rawRecovery.model');
+
+// Business timezone used for Vendor daily access
 
 const BUSINESS_TIME_ZONE =
   process.env.BUSINESS_TIME_ZONE || 'Asia/Kolkata';
@@ -27,6 +31,8 @@ const getBusinessDate = () => {
 
 const isVendor = (actor) => actor?.role === 'vendor';
 
+// Restrict Vendor access to today's Recovery Sheet
+
 const assertVendorPackagingDateAccess = (actor, packagingDate) => {
   if (isVendor(actor) && packagingDate !== getBusinessDate()) {
     throw createHttpError(
@@ -38,6 +44,8 @@ const assertVendorPackagingDateAccess = (actor, packagingDate) => {
 
 const roundToTwoDecimals = (value) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
+
+// Calculate hand totals, total quantity and recovery percentage
 
 const calculateRecoveryRow = (rawRow) => {
   const counts = {
@@ -70,6 +78,8 @@ const calculateRecoveryRow = (rawRow) => {
   };
 };
 
+// Retrieve the source Raw Recovery Sheet
+
 const getRawSheetById = async (rawSheetId) => {
   const RawRecoverySheet = getRawRecoverySheetModel();
   const rawSheet = await RawRecoverySheet.findById(rawSheetId);
@@ -85,6 +95,8 @@ const getIncompleteRows = (rawSheet) =>
   rawSheet.rows
     .filter((row) => row.status !== 'Completed')
     .map((row) => row.rowNumber);
+
+// Report completion, save and generation status for a Raw Recovery Sheet
 
 const getGenerationStatus = async (rawSheetId, actor = null) => {
   const rawSheet = await getRawSheetById(rawSheetId);
@@ -109,6 +121,8 @@ const getGenerationStatus = async (rawSheetId, actor = null) => {
     recoverySheetId: existing?._id || null,
   };
 };
+
+// Generate Recovery Sheet rows from completed Raw Recovery data
 
 const generateRecoverySheet = async (rawSheetId, actor = null) => {
   const rawSheet = await getRawSheetById(rawSheetId);
@@ -169,6 +183,8 @@ const generateRecoverySheet = async (rawSheetId, actor = null) => {
   };
 };
 
+// Retrieve a generated Recovery Sheet by ID
+
 const getRecoverySheetById = async (id, actor = null) => {
   const RecoverySheet = getRecoverySheetModel();
   const sheet = await RecoverySheet.findById(id);
@@ -200,6 +216,8 @@ const getRecoverySheetByRawId = async (rawSheetId, actor = null) => {
   return sheet;
 };
 
+// List available sheets while enforcing Vendor date restrictions
+
 const listRecoverySheetOptions = async (actor = null) => {
   const RecoverySheet = getRecoverySheetModel();
 
@@ -230,6 +248,8 @@ const listRecoverySheetOptions = async (actor = null) => {
   }));
 };
 
+// Find a generated sheet by packaging date, vendor and line
+
 const findRecoverySheet = async ({
   packagingDate,
   vendorName,
@@ -255,6 +275,8 @@ const findRecoverySheet = async ({
   return sheet;
 };
 
+// Permanently delete a generated Recovery Sheet
+
 const deleteRecoverySheet = async (id) => {
   const RecoverySheet = getRecoverySheetModel();
 
@@ -272,6 +294,8 @@ const createHttpError = (statusCode, message) => {
   error.statusCode = statusCode;
   return error;
 };
+
+// Export Recovery Sheet service functions
 
 module.exports = {
   getBusinessDate,

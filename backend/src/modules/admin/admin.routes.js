@@ -1,3 +1,5 @@
+// Admin route dependencies
+
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
@@ -7,17 +9,25 @@ const {
   validateCreateId,
 } = require('./admin.validation');
 
+// Create the Admin router
+
 const router = express.Router();
+
+// Protect Admin routes with authentication and role authorization
 
 router.use(
   authMiddleware,
   authorize('admin')
 );
 
+// Admin dashboard route
+
 router.get(
   '/dashboard',
   asyncHandler(controller.getDashboard)
 );
+
+// User creation and account-management routes
 
 router.post(
   '/users',
@@ -29,6 +39,8 @@ router.get(
   '/active-ids',
   asyncHandler(controller.listActiveIds)
 );
+
+// Signup request review routes
 
 router.get(
   '/signup-requests/count',
@@ -71,9 +83,13 @@ router.patch(
 );
 
 
+// User deletion route
+
 router.delete(
   '/users/:id',
   asyncHandler(controller.deleteUser)
 );
+
+// Export Admin routes
 
 module.exports = router;

@@ -1,9 +1,13 @@
+// Raw Recovery model dependencies and supported values
+
 const mongoose = require('mongoose');
 const { getRawRecoveryDb } = require('../../config/db');
 
 const DEFAULT_ROW_COUNT = 11;
 const HAND_VALUES = [4, 5, 6, 8];
 const ROW_STATUSES = ['Not Started', 'In Progress', 'Completed'];
+
+// Store each barcode scanned into a recovery row
 
 const scannedBarcodeSchema = new mongoose.Schema(
   {
@@ -29,6 +33,8 @@ const scannedBarcodeSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+// Define status and barcode data for one recovery row
 
 const recoveryRowSchema = new mongoose.Schema(
   {
@@ -63,6 +69,8 @@ const recoveryRowSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Create the default set of recovery rows
+
 const buildInitialRows = (count = DEFAULT_ROW_COUNT) =>
   Array.from({ length: count }, (_, index) => ({
     rowNumber: index + 1,
@@ -89,6 +97,8 @@ const rowsAreValid = (rows) => {
 
   return new Set(numbers).size === numbers.length;
 };
+
+// Store a Raw Recovery Sheet by date, vendor and line
 
 const rawRecoverySheetSchema = new mongoose.Schema(
   {
@@ -135,6 +145,8 @@ const rawRecoverySheetSchema = new mongoose.Schema(
   }
 );
 
+// Prevent duplicate sheets for the same date, vendor and line
+
 rawRecoverySheetSchema.index(
   {
     packagingDate: 1,
@@ -149,6 +161,8 @@ rawRecoverySheetSchema.index(
 
 const MODEL_NAME = 'RawRecoverySheet';
 
+// Resolve the Raw Recovery Sheet model
+
 const getRawRecoverySheetModel = () => {
   const db = getRawRecoveryDb();
 
@@ -162,6 +176,8 @@ const getRawRecoverySheetModel = () => {
     'recovery_sheets'
   );
 };
+
+// Export Raw Recovery model helpers
 
 module.exports = {
   DEFAULT_ROW_COUNT,

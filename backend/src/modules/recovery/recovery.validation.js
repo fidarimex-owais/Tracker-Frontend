@@ -1,6 +1,10 @@
+// Recovery Sheet validation dependencies
+
 const mongoose = require('mongoose');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Reusable MongoDB ObjectId route-parameter validator
 
 const validateObjectIdParam = (paramName, message) => (req, res, next) => {
   const value = req.params[paramName];
@@ -24,6 +28,8 @@ const validateRawRecoverySheetId = validateObjectIdParam(
   'rawSheetId',
   'Invalid Raw Recovery Sheet ID'
 );
+
+// Validate Recovery Sheet lookup filters
 
 const validateRecoveryLookupQuery = (req, res, next) => {
   const packagingDate =
@@ -78,6 +84,8 @@ const validateRecoveryLookupQuery = (req, res, next) => {
 
   return next();
 };
+
+// Export Recovery Sheet validation middleware
 
 module.exports = {
   validateRecoverySheetId,

@@ -1,4 +1,8 @@
+// Raw Recovery controller dependency
+
 const service = require('./rawRecovery.service');
+
+// Create a Raw Recovery Sheet
 
 const createSheet = async (req, res) => {
   const sheet = await service.createSheet(req.body);
@@ -37,6 +41,8 @@ const getRow = async (req, res) => {
   });
 };
 
+// Add a scanned barcode to the selected row
+
 const scanBarcode = async (req, res) => {
   const data = await service.addBarcode(
     req.params.id,
@@ -51,6 +57,8 @@ const scanBarcode = async (req, res) => {
   });
 };
 
+// Mark the selected row as completed
+
 const completeRow = async (req, res) => {
   const data = await service.completeRow(req.params.id, req.rowNumber);
 
@@ -60,6 +68,8 @@ const completeRow = async (req, res) => {
     data,
   });
 };
+
+// Save the completed Raw Recovery Sheet
 
 const saveSheet = async (req, res) => {
   const data = await service.saveCompletedSheet(req.params.id);
@@ -74,10 +84,14 @@ const saveSheet = async (req, res) => {
 };
 
 
+// Return whether reset requires deleting a generated Recovery Sheet
+
 const getResetStatus = async (req, res) => {
   const data = await service.getResetStatus(req.params.id);
   res.json({ success: true, data });
 };
+
+// Reset Raw Recovery data using the Admin confirmation flag
 
 const resetSheet = async (req, res) => {
   const data = await service.resetSheetData(req.params.id, {
@@ -92,6 +106,8 @@ const resetSheet = async (req, res) => {
     data,
   });
 };
+
+// Unlock a saved sheet for permitted roles
 
 const editSheet = async (req, res) => {
   const data = await service.editSavedSheet(req.params.id);
@@ -149,6 +165,8 @@ const removeRow = async (req, res) => {
   });
 };
 
+// Return vendors for the selected packaging date
+
 const listVendors = async (req, res) => {
   const vendors = await service.listVendors(req.packagingDate);
 
@@ -158,6 +176,8 @@ const listVendors = async (req, res) => {
     vendors,
   });
 };
+
+// Return line numbers for the selected vendor
 
 const listLines = async (req, res) => {
   const lines = await service.listLines(req.vendorLookup);
@@ -169,6 +189,8 @@ const listLines = async (req, res) => {
     lines,
   });
 };
+
+// Export Raw Recovery controller handlers
 
 module.exports = {
   createSheet,

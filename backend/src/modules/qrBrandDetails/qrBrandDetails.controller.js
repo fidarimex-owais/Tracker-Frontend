@@ -1,4 +1,8 @@
+// QR Brand Details controller dependency
+
 const service = require('./qrBrandDetails.service');
+
+// Return filtered QR Brand Detail records
 
 const listDetails = async (req, res) => {
   const data = await service.listDetails(req.query);
@@ -9,6 +13,8 @@ const listDetails = async (req, res) => {
   });
 };
 
+// Return available values for QR Brand Detail filters
+
 const listOptions = async (req, res) => {
   const data = await service.listOptions(req.query);
 
@@ -17,6 +23,8 @@ const listOptions = async (req, res) => {
     data,
   });
 };
+
+// Delete an individual QR Brand Detail record
 
 const deleteRecord = async (req, res) => {
   const data = await service.deleteRecord({
@@ -31,6 +39,8 @@ const deleteRecord = async (req, res) => {
     data,
   });
 };
+
+// Export QR Brand Details controller handlers
 
 module.exports = {
   listDetails,

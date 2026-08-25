@@ -1,10 +1,16 @@
+// MongoDB connection dependency
+
 const mongoose = require('mongoose');
+
+// Database connection references
 
 let brandDb = null;
 let userDb = null;
 let barcodeDb = null;
 let rawRecoveryDb = null;
 let recoveryDb = null;
+
+// Database names can be configured through environment variables
 
 const BRAND_DB_NAME = process.env.BRAND_DB_NAME || 'qr_brand_details';
 const USER_DB_NAME = process.env.USER_DB_NAME || 'user_credentials';
@@ -13,6 +19,8 @@ const RAW_RECOVERY_DB_NAME =
   process.env.RAW_RECOVERY_DB_NAME || 'raw_recovery_sheet_structure';
 const RECOVERY_DB_NAME =
   process.env.RECOVERY_DB_NAME || 'recovery_sheet_structure';
+
+// Connect to MongoDB and initialize each application database
 
 const connectDB = async () => {
   if (!process.env.MONGODB_URI) {
@@ -56,6 +64,8 @@ const connectDB = async () => {
     recoveryDb,
   };
 };
+
+// Database access helpers ensure the connection is initialized before use
 
 const getBrandDb = () => {
   if (!brandDb) {
@@ -106,6 +116,8 @@ const getRecoveryDb = () => {
 
   return recoveryDb;
 };
+
+// Export the connection function, database helpers, and database names
 
 module.exports = connectDB;
 

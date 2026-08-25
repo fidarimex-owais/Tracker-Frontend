@@ -1,3 +1,5 @@
+// frontend/src/pages/supervisor/Scanner.jsx
+
 import { useState } from 'react';
 import { resolveScan } from '../../services/scanningService';
 

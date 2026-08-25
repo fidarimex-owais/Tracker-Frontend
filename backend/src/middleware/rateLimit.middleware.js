@@ -1,7 +1,11 @@
+// Rate limiter configuration helpers
+
 const toPositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
+
+// Create an in-memory request rate limiter
 
 const createRateLimiter = ({
   windowMs,
@@ -66,6 +70,8 @@ const createRateLimiter = ({
   };
 };
 
+// General API rate limit
+
 const apiRateLimiter = createRateLimiter({
   windowMs: toPositiveInteger(
     process.env.RATE_LIMIT_WINDOW_MS,
@@ -75,6 +81,8 @@ const apiRateLimiter = createRateLimiter({
   message: 'Too many API requests. Please try again later.',
 });
 
+// Login-specific rate limit
+
 const loginRateLimiter = createRateLimiter({
   windowMs: toPositiveInteger(
     process.env.LOGIN_RATE_LIMIT_WINDOW_MS,
@@ -83,6 +91,8 @@ const loginRateLimiter = createRateLimiter({
   max: toPositiveInteger(process.env.LOGIN_RATE_LIMIT_MAX, 20),
   message: 'Too many login attempts. Please try again later.',
 });
+
+// Signup-specific rate limit
 
 const signupRateLimiter = createRateLimiter({
   windowMs: toPositiveInteger(

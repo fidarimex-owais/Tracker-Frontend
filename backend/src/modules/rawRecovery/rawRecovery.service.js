@@ -1,3 +1,5 @@
+// Raw Recovery service dependencies
+
 const {
   getRawRecoverySheetModel,
   buildInitialRows,
@@ -11,6 +13,8 @@ const {
 const {
   generateRecoverySheet,
 } = require('../recovery/recovery.service');
+
+// Create a Raw Recovery Sheet after validating vendor and line data
 
 const createSheet = async ({ packagingDate, vendorName, lineNumber }) => {
   await assertVendorLineExists({ packagingDate, vendorName, lineNumber });
@@ -38,6 +42,8 @@ const createSheet = async ({ packagingDate, vendorName, lineNumber }) => {
   });
 };
 
+// Retrieve a Raw Recovery Sheet by MongoDB ID
+
 const getSheetById = async (id) => {
   const RawRecoverySheet = getRawRecoverySheetModel();
   const sheet = await RawRecoverySheet.findById(id);
@@ -48,6 +54,8 @@ const getSheetById = async (id) => {
 
   return sheet;
 };
+
+// Find a sheet using packaging date, vendor and line number
 
 const lookupSheet = async ({ packagingDate, vendorName, lineNumber }) => {
   const RawRecoverySheet = getRawRecoverySheetModel();
@@ -75,6 +83,8 @@ const getRow = async (sheetId, rowNumber) => {
 
   return buildRowResponse(sheet, row);
 };
+
+// Validate and add a scanned barcode to the selected row
 
 const addBarcode = async (sheetId, rowNumber, barcodeScan) => {
   const sheet = await getSheetById(sheetId);
@@ -122,6 +132,8 @@ const addBarcode = async (sheetId, rowNumber, barcodeScan) => {
   return buildRowResponse(sheet, row);
 };
 
+// Mark an individual recovery row as completed
+
 const completeRow = async (sheetId, rowNumber) => {
   const sheet = await getSheetById(sheetId);
   assertSheetNotSaved(sheet);
@@ -147,6 +159,8 @@ const completeRow = async (sheetId, rowNumber) => {
   };
 };
 
+// Add a new row while the sheet is still editable
+
 const addRow = async (sheetId) => {
   const sheet = await getSheetById(sheetId);
   assertSheetNotSaved(sheet);
@@ -170,6 +184,8 @@ const addRow = async (sheetId) => {
     addedRowNumber: nextRowNumber,
   };
 };
+
+// Remove an unused row from an editable sheet
 
 const removeRow = async (sheetId, rowNumber) => {
   const sheet = await getSheetById(sheetId);
@@ -205,6 +221,8 @@ const removeRow = async (sheetId, rowNumber) => {
     removedRowNumber: rowNumber,
   };
 };
+
+// Save only after every row is complete and generate Recovery Sheet data
 
 const saveCompletedSheet = async (sheetId) => {
   const sheet = await getSheetById(sheetId);
@@ -243,6 +261,8 @@ const saveCompletedSheet = async (sheetId) => {
 
 
 
+// Check whether a generated Recovery Sheet already exists
+
 const getResetStatus = async (sheetId) => {
   const sheet = await getSheetById(sheetId);
   const RecoverySheet = getRecoverySheetModel();
@@ -255,6 +275,8 @@ const getResetStatus = async (sheetId) => {
     recoverySheetId: generatedRecoverySheet?._id || null,
   };
 };
+
+// Reset scanned Raw Recovery data with generated-sheet protection
 
 const resetSheetData = async (sheetId, { deleteGeneratedRecovery = false } = {}) => {
   const sheet = await getSheetById(sheetId);
@@ -296,6 +318,8 @@ const resetSheetData = async (sheetId, { deleteGeneratedRecovery = false } = {})
   return { sheet, recoveryDeleted };
 };
 
+// Unlock a saved Raw Recovery Sheet for Admin/Sub-admin editing
+
 const editSavedSheet = async (sheetId) => {
   const sheet = await getSheetById(sheetId);
 
@@ -322,6 +346,8 @@ const editSavedSheet = async (sheetId) => {
   };
 };
 
+// Reopen a completed row so its barcode data can be edited
+
 const reopenRow = async (sheetId, rowNumber) => {
   const sheet = await getSheetById(sheetId);
   assertSheetNotSaved(sheet);
@@ -347,6 +373,8 @@ const reopenRow = async (sheetId, rowNumber) => {
 
   return buildRowResponse(sheet, row);
 };
+
+// Remove a barcode from an editable recovery row
 
 const removeBarcode = async (sheetId, rowNumber, barcodeId) => {
   const sheet = await getSheetById(sheetId);
@@ -400,6 +428,8 @@ const assertSheetNotSaved = (sheet) => {
   }
 };
 
+// Return vendors available in barcode data for a packaging date
+
 const listVendors = async (packagingDate) => {
   const BarcodeModel = getBarcodeModelForPackageDate(packagingDate);
   const documents = await BarcodeModel.find({})
@@ -409,6 +439,8 @@ const listVendors = async (packagingDate) => {
 
   return [...new Set(documents.map((item) => item.vendorName).filter(Boolean))];
 };
+
+// Return available line numbers for the selected vendor
 
 const listLines = async ({ packagingDate, vendorName }) => {
   const BarcodeModel = getBarcodeModelForPackageDate(packagingDate);
@@ -422,6 +454,8 @@ const listLines = async ({ packagingDate, vendorName }) => {
     (a, b) => a - b
   );
 };
+
+// Verify that the selected vendor and line exist in barcode data
 
 const assertVendorLineExists = async ({
   packagingDate,
@@ -449,6 +483,8 @@ const assertVendorLineExists = async ({
 
   return line;
 };
+
+// Ensure a scanned barcode belongs to this sheet's vendor and line
 
 const assertBarcodeBelongsToSheet = async (sheet, barcodeScan) => {
   const line = await assertVendorLineExists({
@@ -497,6 +533,8 @@ const createHttpError = (statusCode, message) => {
   error.statusCode = statusCode;
   return error;
 };
+
+// Export Raw Recovery service functions
 
 module.exports = {
   createSheet,

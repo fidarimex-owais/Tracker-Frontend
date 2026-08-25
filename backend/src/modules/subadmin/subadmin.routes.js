@@ -1,3 +1,5 @@
+// Sub-admin route dependencies
+
 const express = require('express');
 const asyncHandler = require('../../middleware/async.middleware');
 const authMiddleware = require('../../middleware/auth.middleware');
@@ -7,23 +9,33 @@ const {
   validateCreateId,
 } = require('../admin/admin.validation');
 
+// Create the Sub-admin router
+
 const router = express.Router();
+
+// Protect all Sub-admin routes with authentication and role authorization
 
 router.use(
   authMiddleware,
   authorize('subadmin')
 );
 
+// Sub-admin dashboard route
+
 router.get(
   '/dashboard',
   asyncHandler(adminController.getDashboard)
 );
+
+// Create users permitted under the Sub-admin role
 
 router.post(
   '/users',
   validateCreateId,
   asyncHandler(adminController.createUser)
 );
+
+// Signup request review routes
 
 router.get(
   '/signup-requests/count',
@@ -44,6 +56,8 @@ router.patch(
   '/signup-requests/:id/reject',
   asyncHandler(adminController.rejectSignupRequest)
 );
+
+// User management routes
 
 router.get(
   '/users',
@@ -66,9 +80,13 @@ router.patch(
 );
 
 
+// Delete users that the Sub-admin is permitted to manage
+
 router.delete(
   '/users/:id',
   asyncHandler(adminController.deleteUser)
 );
+
+// Export Sub-admin router
 
 module.exports = router;

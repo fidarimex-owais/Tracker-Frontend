@@ -1,3 +1,5 @@
+// frontend/src/pages/LandingPage.jsx
+
 import { Link } from 'react-router-dom';
 
 import fidarLogo from '../assets/fidar-imex-logo.png';

@@ -1,7 +1,11 @@
+// Barcode model dependencies and supported hand values
+
 const mongoose = require('mongoose');
 const { getBarcodeDb } = require('../../config/db');
 
 const HAND_VALUES = [4, 5, 6, 8];
+
+// Embedded geolocation data for each generated line
 
 const geolocationSchema = new mongoose.Schema(
   {
@@ -20,6 +24,8 @@ const geolocationSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+// Barcode category data grouped by hand quantity
 
 const barcodeCategorySchema = new mongoose.Schema(
   {
@@ -44,6 +50,8 @@ const barcodeCategorySchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+// Generated barcode data for one packaging line
 
 const barcodeLineSchema = new mongoose.Schema(
   {
@@ -124,6 +132,8 @@ const barcodeLineSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Store all generated lines for one vendor and packaging date
+
 const vendorBarcodeSchema = new mongoose.Schema(
   {
     packageDate: {
@@ -146,6 +156,8 @@ const vendorBarcodeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Convert the packaging date into its MongoDB collection name
+
 const formatPackageDateCollectionName = (packageDate) => {
   const date = packageDate instanceof Date
     ? packageDate
@@ -157,6 +169,8 @@ const formatPackageDateCollectionName = (packageDate) => {
 
   return date.toISOString().slice(0, 10);
 };
+
+// Resolve the date-specific barcode collection model
 
 const getBarcodeModelForPackageDate = (packageDate) => {
   const collectionName = formatPackageDateCollectionName(packageDate);
@@ -173,6 +187,8 @@ const getBarcodeModelForPackageDate = (packageDate) => {
     collectionName
   );
 };
+
+// Export barcode model helpers
 
 module.exports = {
   HAND_VALUES,

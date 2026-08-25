@@ -1,16 +1,24 @@
+// DNS configuration for MongoDB Atlas
+
 const dns = require('dns');
 
 // Local Windows DNS can refuse MongoDB Atlas SRV lookups.
 // Use Cloudflare DNS explicitly before Mongoose connects.
 dns.setServers(['1.1.1.1', '1.0.0.1']);
 
+// Load environment variables
+
 require('dotenv').config();
+
+// Application and database dependencies
 
 const app = require('./app');
 const connectDB = require('./config/db');
 const { ensureAdminUser } = require('./modules/auth/auth.service');
 
 const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB, ensure the Admin account exists, and start the server
 
 const startServer = async () => {
   await connectDB();
@@ -22,6 +30,8 @@ const startServer = async () => {
     console.log(`Server running on port ${PORT}`);
   });
 };
+
+// Handle startup failures
 
 startServer().catch((error) => {
   console.error(`Server startup failed: ${error.message}`);

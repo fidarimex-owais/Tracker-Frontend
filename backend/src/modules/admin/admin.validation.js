@@ -1,5 +1,9 @@
+// Validation patterns for email and mobile numbers
+
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
+
+// Supported brands and portal roles
 
 const BRAND_OPTIONS = [
   'Hi Banana',
@@ -17,6 +21,8 @@ const BRAND_REQUIRED_ROLES = [
   'vendor',
   'supervisor',
 ];
+
+// Validate and normalize Admin-created user account data
 
 const validateCreateId = (req, res, next) => {
   const role =
@@ -134,6 +140,8 @@ const validateCreateId = (req, res, next) => {
 
   return next();
 };
+
+// Export validation options and middleware
 
 module.exports = {
   BRAND_OPTIONS,

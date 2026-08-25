@@ -1,3 +1,5 @@
+// QR record service dependencies
+
 const { getModelForBrand } = require('./records.model');
 const {
   generateBarcodeIds,
@@ -5,7 +7,11 @@ const {
   removeBarcodeLine,
 } = require('../barcode/barcode.service');
 
+// Supported banana hand categories
+
 const HAND_VALUES = [4, 5, 6, 8];
+
+// Mirror saved QR line data into the barcode database
 
 const syncSavedLine = async ({
   Model,
@@ -29,6 +35,8 @@ const syncSavedLine = async ({
  * The original data remains in qr_brand_details. After the QR record is
  * saved, the same line + generated barcode IDs are mirrored into barcode_data.
  */
+// Save a new QR line and detect duplicate line numbers
+
 const submitLine = async (payload) => {
   const Model = getModelForBrand(payload.brandName);
   let document = await Model.findOne({ packageDate: payload.packageDate });
@@ -93,6 +101,8 @@ const submitLine = async (payload) => {
  * - update: replaces mutable line data, regenerates QR/barcode IDs, and then
  *   replaces the mirrored barcode_data line.
  */
+// Reuse or update a conflicting line and synchronize barcode data
+
 const resolveConflict = async ({ brandName, packageDate, lineNumber, action, payload }) => {
   const Model = getModelForBrand(brandName);
   const document = await Model.findOne({ packageDate });
@@ -156,6 +166,8 @@ const resolveConflict = async ({ brandName, packageDate, lineNumber, action, pay
  * Read-only lookup used by sticker delivery (download + print).
  * No IDs or images are generated here; it returns persisted QR/barcode data.
  */
+// Retrieve persisted QR/barcode data for download or printing
+
 const getCategoryForDelivery = async ({ brandName, packageDate, lineNumber, numberOfHands }) => {
   const Model = getModelForBrand(brandName);
   const document = await Model.findOne({ packageDate });
@@ -189,6 +201,8 @@ const getCategoryForDelivery = async ({ brandName, packageDate, lineNumber, numb
   };
 };
 
+// Build QR categories and generate barcode IDs from quantities
+
 const buildQrCodes = (quantities) =>
   HAND_VALUES.filter((numberOfHands) => (quantities[numberOfHands] ?? 0) > 0).map(
     (numberOfHands) => ({
@@ -200,6 +214,8 @@ const buildQrCodes = (quantities) =>
     })
   );
 
+// Build the line object stored inside the package document
+
 const buildLine = (payload) => ({
   lineNumber: payload.lineNumber,
   vendorName: payload.vendorName,
@@ -210,6 +226,8 @@ const buildLine = (payload) => ({
   geolocation: payload.geolocation,
   qrCodes: buildQrCodes(payload.quantities),
 });
+
+// Return a clean line response for the frontend
 
 const formatLine = (context, line) => ({
   brandName: context.brandName,
@@ -232,6 +250,8 @@ const createHttpError = (statusCode, message) => {
   error.statusCode = statusCode;
   return error;
 };
+
+// Export QR record service functions
 
 module.exports = {
   submitLine,

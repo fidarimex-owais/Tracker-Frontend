@@ -1,3 +1,5 @@
+// Authentication model dependencies and brand configuration
+
 const mongoose = require('mongoose');
 const { getUserDb } = require('../../config/db');
 
@@ -11,6 +13,8 @@ const BRAND_ROLES = [
   'vendor',
   'supervisor',
 ];
+
+// User credential schema
 
 const userSchema = new mongoose.Schema(
   {
@@ -109,6 +113,8 @@ const ALL_ROLES = [
   'supervisor',
 ];
 
+// Brand and user lookup helpers
+
 const getEffectiveBrand = (user) => {
   if (!user) {
     return '';
@@ -139,6 +145,8 @@ const buildBrandFilter = (brandName) => ({
   ],
 });
 
+// Initialize and access the credential collection
+
 const getUserModel = () => {
   const userDb = getUserDb();
 
@@ -159,6 +167,8 @@ const ensureCredentialCollection = async () => {
   await User.createCollection();
   await User.syncIndexes();
 };
+
+// Find users by normalized email or MongoDB ID
 
 const findUserByEmail = async (
   email,
@@ -201,6 +211,8 @@ const findUserById = async (
 
   return query;
 };
+
+// List portal users according to role and optional brand
 
 const listUsersByRoles = async (
   roles = ALL_ROLES,
@@ -245,6 +257,8 @@ const listActivePortalUsers = async () => {
     })
     .lean();
 };
+
+// Export authentication model helpers
 
 module.exports = {
   BRAND_OPTIONS,

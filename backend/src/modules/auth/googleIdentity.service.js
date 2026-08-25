@@ -1,3 +1,5 @@
+// Google identity verification dependencies and configuration
+
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
@@ -10,6 +12,8 @@ const GOOGLE_ISSUERS = [
 let cachedKeys = [];
 let cacheExpiresAt = 0;
 
+// Shared Google authentication helpers
+
 const createHttpError = (statusCode, message) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -20,6 +24,8 @@ const parseMaxAge = (cacheControl = '') => {
   const match = cacheControl.match(/max-age=(\d+)/i);
   return match ? Number.parseInt(match[1], 10) : 3600;
 };
+
+// Retrieve and cache Google's public signing keys
 
 const fetchGoogleKeys = async ({ force = false } = {}) => {
   const now = Date.now();
@@ -59,6 +65,8 @@ const fetchGoogleKeys = async ({ force = false } = {}) => {
   return cachedKeys;
 };
 
+// Resolve the public key matching the token key ID
+
 const getSigningKey = async (kid) => {
   let keys = await fetchGoogleKeys();
   let key = keys.find((item) => item.kid === kid);
@@ -77,6 +85,8 @@ const getSigningKey = async (kid) => {
     format: 'jwk',
   });
 };
+
+// Verify the Google ID token and return the verified identity
 
 const verifyGoogleIdToken = async (credential) => {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
@@ -127,6 +137,8 @@ const verifyGoogleIdToken = async (credential) => {
     picture: payload.picture || '',
   };
 };
+
+// Export Google identity verification service
 
 module.exports = {
   verifyGoogleIdToken,

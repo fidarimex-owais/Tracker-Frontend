@@ -1,3 +1,5 @@
+// frontend/src/pages/QRCodeGenerator.jsx
+
 import { useState } from 'react';
 import {
   buildStickerDownloadUrl,

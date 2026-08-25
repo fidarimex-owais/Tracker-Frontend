@@ -1,3 +1,5 @@
+// frontend/src/layouts/PortalLayout.jsx
+
 import { useEffect, useState } from 'react';
 import {
   NavLink,

@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/SignupRequests.jsx
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
 
