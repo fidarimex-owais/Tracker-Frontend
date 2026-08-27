@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
+import ThemeToggle from '../components/ThemeToggle';
 
 import {
   SIGNUP_REQUESTS_CHANGED_EVENT,
@@ -17,6 +18,7 @@ import {
 const links = {
   admin: [
     { to: '/admin', label: 'Dashboard', end: true },
+    { to: '/admin/profile', label: 'Profile' },
     { to: '/admin/create-id', label: 'Create ID' },
     { to: '/admin/users', label: 'User' },
     {
@@ -32,6 +34,7 @@ const links = {
   ],
   subadmin: [
     { to: '/sub-admin', label: 'Dashboard', end: true },
+    { to: '/sub-admin/profile', label: 'Profile' },
     { to: '/sub-admin/create-id', label: 'Create ID' },
     {
       to: '/sub-admin/signup-requests',
@@ -46,6 +49,7 @@ const links = {
   ],
   vendor: [
     { to: '/vendor', label: 'Dashboard', end: true },
+    { to: '/vendor/profile', label: 'Profile' },
     { to: '/vendor/create-id', label: 'Create ID' },
     {
       to: '/vendor/signup-requests',
@@ -58,6 +62,7 @@ const links = {
   ],
   supervisor: [
     { to: '/supervisor', label: 'Dashboard', end: true },
+    { to: '/supervisor/profile', label: 'Profile' },
     { to: '/supervisor/barcode-scanner', label: 'Barcode Scanner' },
   ],
 };
@@ -69,6 +74,33 @@ const portalName = (role) =>
 
 const canReviewSignupRequests = (role) =>
   ['admin', 'subadmin', 'vendor'].includes(role);
+
+const profilePathForRole = (role) => {
+  if (role === 'subadmin') {
+    return '/sub-admin/profile';
+  }
+
+  return `/${role}/profile`;
+};
+
+const profileInitials = (user) => {
+  const name = String(
+    user.fullName || user.userName || ''
+  ).trim();
+
+  if (name) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('');
+  }
+
+  return String(user.email || 'U')
+    .charAt(0)
+    .toUpperCase();
+};
 
 export default function PortalLayout() {
   const { user, logout } = useAuth();
@@ -165,15 +197,35 @@ export default function PortalLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-            <div className="hidden max-w-64 text-right md:block">
-              <p className="truncate text-sm font-medium text-slate-800">
-                {user.email}
-              </p>
+            <NavLink
+              to={profilePathForRole(user.role)}
+              className="hidden min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-slate-100 md:flex"
+              title="Open profile"
+            >
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt="Profile"
+                  className="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover"
+                />
+              ) : (
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-extrabold text-orange-700">
+                  {profileInitials(user)}
+                </span>
+              )}
 
-              <p className="text-xs text-slate-500">
-                {portalName(user.role)}
-              </p>
-            </div>
+              <span className="min-w-0 max-w-52 text-right">
+                <span className="block truncate text-sm font-medium text-slate-800">
+                  {user.fullName || user.userName || user.email}
+                </span>
+
+                <span className="block truncate text-xs text-slate-500">
+                  {portalName(user.role)}
+                </span>
+              </span>
+            </NavLink>
+
+            <ThemeToggle compact />
 
             <button
               type="button"

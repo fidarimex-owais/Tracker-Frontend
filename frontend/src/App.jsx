@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom';
 
 import { AuthProvider } from './auth/AuthContext';
+import { ThemeProvider } from './theme/ThemeContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import PortalLayout from './layouts/PortalLayout';
@@ -28,11 +29,13 @@ import VendorDashboard from './pages/vendor/VendorDashboard';
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 import QRCodeGenerator from './pages/QRCodeGenerator';
 import RecoverySheet from './pages/recovery/RecoverySheet';
+import Profile from './pages/profile/Profile';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
         <Routes>
           <Route
             path="/login"
@@ -102,6 +105,11 @@ export default function App() {
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
+
+              <Route
+                path="profile"
+                element={<Profile />}
+              />
             </Route>
           </Route>
 
@@ -153,6 +161,11 @@ export default function App() {
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
+
+              <Route
+                path="profile"
+                element={<Profile />}
+              />
             </Route>
           </Route>
 
@@ -194,6 +207,11 @@ export default function App() {
                 path="recovery-sheets"
                 element={<RecoverySheet />}
               />
+
+              <Route
+                path="profile"
+                element={<Profile />}
+              />
             </Route>
           </Route>
 
@@ -215,6 +233,11 @@ export default function App() {
                 path="barcode-scanner"
                 element={<AdminBarcodeScanner />}
               />
+
+              <Route
+                path="profile"
+                element={<Profile />}
+              />
             </Route>
           </Route>
 
@@ -223,7 +246,8 @@ export default function App() {
             element={<Navigate to="/" replace />}
           />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

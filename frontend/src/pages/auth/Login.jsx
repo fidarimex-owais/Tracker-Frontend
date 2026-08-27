@@ -17,6 +17,7 @@ import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
 import logo from '../../assets/fidar-imex-logo.png';
 import fruitHero from '../../assets/fidar-fruit-hero.jpg';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
@@ -464,7 +465,10 @@ export function AuthShell({
   wide = false,
 }) {
   return (
-    <main className="min-h-[100dvh] w-full overflow-x-hidden bg-[#f7f4ef] p-2 sm:p-4 lg:h-[100dvh] lg:overflow-hidden lg:px-7 lg:py-4">
+    <main className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#f7f4ef] p-2 sm:p-4 lg:h-[100dvh] lg:overflow-hidden lg:px-7 lg:py-4">
+      <div className="absolute right-3 top-3 z-30 sm:right-5 sm:top-5">
+        <ThemeToggle compact />
+      </div>
       <div className="mx-auto flex min-h-[calc(100dvh-1rem)] w-full max-w-6xl items-center justify-center sm:min-h-[calc(100dvh-2rem)] lg:h-full lg:min-h-0">
         <section className="grid w-full overflow-hidden rounded-2xl border border-white/80 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.16)] lg:h-full lg:max-h-[900px] lg:min-h-0 lg:grid-cols-[1.08fr_0.92fr] lg:rounded-[2rem]">
           <div className="relative z-10 flex min-h-0 min-w-0 flex-col px-4 py-5 sm:px-7 sm:py-6 lg:h-full lg:overflow-y-auto lg:px-[clamp(2rem,3vw,3.5rem)] lg:py-[clamp(0.75rem,1.8vh,1.5rem)]">

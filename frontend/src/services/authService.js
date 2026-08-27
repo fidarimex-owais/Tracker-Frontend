@@ -1,9 +1,19 @@
-//frontend/src/services/authService.js
+// frontend/src/services/authService.js
 
 import api, { setAuthToken } from './api';
 
 const normalize = (error, fallback) => {
-  const err = new Error(error.response?.data?.message || fallback);
+  let message = error.response?.data?.message || fallback;
+
+  if (error.code === 'ECONNABORTED') {
+    message =
+      'Backend connection timed out. Make sure the backend is running on port 5000.';
+  } else if (!error.response) {
+    message =
+      'Cannot connect to the backend. Start the backend and make sure port 5000 is reachable.';
+  }
+
+  const err = new Error(message);
   err.statusCode = error.response?.status;
   err.fieldErrors = error.response?.data?.errors || [];
   return err;

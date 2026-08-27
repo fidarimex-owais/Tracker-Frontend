@@ -55,6 +55,12 @@ export function AuthProvider({ children }) {
         return authService.signup(payload);
       },
 
+      async refreshUser() {
+        const result = await authService.getMe();
+        setUser(result.user);
+        return result.user;
+      },
+
       async logout() {
         try {
           await authService.logout();

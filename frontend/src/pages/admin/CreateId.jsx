@@ -130,7 +130,7 @@ export default function CreateId() {
     }
 
     if (form.userName.trim().length < 2) {
-      errors.userName = 'Enter the user name';
+      errors.userName = 'Enter the full name';
     }
 
     const normalizedMobile = form.mobileNumber
@@ -333,7 +333,7 @@ export default function CreateId() {
           )}
 
           <Field
-            label="User Name"
+            label="Full Name"
             error={fieldErrors.userName}
           >
             <input
@@ -341,7 +341,7 @@ export default function CreateId() {
               name="userName"
               value={form.userName}
               onChange={handleChange}
-              placeholder="Enter user name"
+              placeholder="Enter full name"
               className={inputClass(fieldErrors.userName)}
             />
           </Field>

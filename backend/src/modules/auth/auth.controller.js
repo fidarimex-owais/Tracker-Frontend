@@ -106,6 +106,21 @@ const me = async (req, res) => {
   });
 };
 
+// Update the current account's own profile
+
+const updateProfile = async (req, res) => {
+  const user = await authService.updateProfile(
+    req.user.id,
+    req.body
+  );
+
+  res.json({
+    success: true,
+    message: 'Profile updated successfully',
+    user,
+  });
+};
+
 // Export authentication controller handlers
 
 module.exports = {
@@ -114,4 +129,5 @@ module.exports = {
   googleLogin,
   logout,
   me,
+  updateProfile,
 };

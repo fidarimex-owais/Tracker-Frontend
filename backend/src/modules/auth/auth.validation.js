@@ -266,6 +266,87 @@ const validateSignupRequest = (req, res, next) => {
   return next();
 };
 
+
+// Validate updates to the currently authenticated user's profile
+
+const PROFILE_IMAGE_RE =
+  /^data:image\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/;
+
+const getDataUrlByteSize = (dataUrl) => {
+  const base64 = String(dataUrl || '').split(',')[1] || '';
+  const padding = (base64.match(/=*$/)?.[0] || '').length;
+
+  return Math.max(
+    0,
+    Math.floor((base64.length * 3) / 4) - padding
+  );
+};
+
+const validateProfileUpdate = (req, res, next) => {
+  const fullName =
+    typeof req.body?.fullName === 'string'
+      ? req.body.fullName.trim()
+      : '';
+
+  const mobileNumber =
+    typeof req.body?.mobileNumber === 'string'
+      ? req.body.mobileNumber
+          .trim()
+          .replace(/[\s-]/g, '')
+      : '';
+
+  const profilePicture =
+    typeof req.body?.profilePicture === 'string'
+      ? req.body.profilePicture.trim()
+      : '';
+
+  const errors = [];
+
+  if (fullName.length < 2 || fullName.length > 80) {
+    errors.push({
+      field: 'fullName',
+      message: 'Full name must be between 2 and 80 characters',
+    });
+  }
+
+  if (!MOBILE_RE.test(mobileNumber)) {
+    errors.push({
+      field: 'mobileNumber',
+      message: 'Enter a valid mobile number',
+    });
+  }
+
+  if (profilePicture) {
+    if (!PROFILE_IMAGE_RE.test(profilePicture)) {
+      errors.push({
+        field: 'profilePicture',
+        message: 'Profile picture must be a PNG, JPG, or WebP image',
+      });
+    } else if (getDataUrlByteSize(profilePicture) > 1024 * 1024) {
+      errors.push({
+        field: 'profilePicture',
+        message: 'Profile picture must be 1 MB or smaller',
+      });
+    }
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors,
+    });
+  }
+
+  req.body = {
+    fullName,
+    mobileNumber,
+    profilePicture,
+  };
+
+  return next();
+};
+
 // Export authentication validation helpers
 
 module.exports = {
@@ -278,4 +359,5 @@ module.exports = {
   validateCredentials,
   validateGoogleCredentials,
   validateSignupRequest,
+  validateProfileUpdate,
 };

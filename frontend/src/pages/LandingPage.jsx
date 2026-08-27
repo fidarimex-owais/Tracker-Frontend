@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import fidarLogo from '../assets/fidar-imex-logo.png';
 import fruitHero from '../assets/fidar-fruit-hero.jpg';
 import qrHero from '../assets/qr-operations-hero.png';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function LandingPage() {
   return (
@@ -20,6 +21,8 @@ export default function LandingPage() {
           </Link>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <ThemeToggle compact />
+
             <Link
               to="/login"
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-900 px-3 text-xs font-extrabold text-slate-950 transition hover:border-orange-500 hover:text-orange-600 sm:rounded-xl sm:px-5 sm:text-sm"

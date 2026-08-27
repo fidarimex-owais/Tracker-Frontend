@@ -12,6 +12,7 @@ const {
   validateCredentials,
   validateGoogleCredentials,
   validateSignupRequest,
+  validateProfileUpdate,
 } = require('./auth.validation');
 
 const controller = require('./auth.controller');
@@ -55,6 +56,13 @@ router.get(
   '/me',
   authMiddleware,
   asyncHandler(controller.me)
+);
+
+router.patch(
+  '/profile',
+  authMiddleware,
+  validateProfileUpdate,
+  asyncHandler(controller.updateProfile)
 );
 
 // Export authentication routes

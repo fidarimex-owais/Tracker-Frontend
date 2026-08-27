@@ -86,7 +86,7 @@ const validateCreateId = (req, res, next) => {
   if (userName.length < 2) {
     errors.push({
       field: 'userName',
-      message: 'User name is required',
+      message: 'Full name is required',
     });
   }
 

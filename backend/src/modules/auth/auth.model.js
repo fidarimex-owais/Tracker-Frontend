@@ -60,6 +60,12 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
+    profilePicture: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     role: {
       type: String,
       enum: ['admin', 'subadmin', 'vendor', 'supervisor'],
@@ -237,6 +243,7 @@ const listUsersByRoles = async (
   }
 
   return User.find(filter)
+    .select('-profilePicture')
     .sort({
       createdAt: -1,
     })
@@ -252,6 +259,7 @@ const listActivePortalUsers = async () => {
       $in: ['subadmin', 'vendor', 'supervisor'],
     },
   })
+    .select('-profilePicture')
     .sort({
       createdAt: -1,
     })

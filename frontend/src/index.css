@@ -61,3 +61,442 @@ canvas {
     max-width: 100%;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Fidar Imex light / dark appearance
+   Dark theme reference: premium charcoal / graphite interface
+   -------------------------------------------------------------------------- */
+
+html {
+  color-scheme: light;
+  background: #ffffff;
+}
+
+/* Reference palette
+   canvas      #151619
+   app surface  #1b1c1f
+   card         #212226
+   raised       #28292d
+   border       #38393e
+   text         #f5f5f3
+   muted        #a5a5a8
+   quiet        #77787d
+   Fidar accent stays orange
+*/
+html.dark {
+  color-scheme: dark;
+  background: #151619;
+}
+
+html.dark body,
+html.dark #root {
+  background: #151619;
+  color: #f5f5f3;
+}
+
+/* Main app surfaces — neutral charcoal, no blue/navy cast. */
+html.dark .bg-white {
+  background-color: #212226 !important;
+}
+
+html.dark .bg-white\/95 {
+  background-color: rgb(33 34 38 / 0.96) !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/70 {
+  background-color: #1b1c1f !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #28292d !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #323338 !important;
+}
+
+html.dark .bg-slate-900 {
+  background-color: #191a1d !important;
+}
+
+html.dark .bg-slate-950,
+html.dark .bg-slate-950\/50 {
+  background-color: #111214 !important;
+}
+
+html.dark [class~="bg-[#f7f4ef]"],
+html.dark [class~="bg-[#fffaf5]"] {
+  background-color: #151619 !important;
+}
+
+/* Text hierarchy inspired by the reference: white titles + restrained gray copy. */
+html.dark .text-slate-950,
+html.dark .text-slate-900 {
+  color: #f7f7f5 !important;
+}
+
+html.dark .text-slate-800 {
+  color: #e5e5e3 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #c8c8c8 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #a5a5a8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #838489 !important;
+}
+
+html.dark .text-slate-300 {
+  color: #b8b8bb !important;
+}
+
+/* Borders / dividers are deliberately low contrast. */
+html.dark .border-slate-100,
+html.dark .divide-slate-100 > :not(:last-child) {
+  border-color: #2d2e32 !important;
+}
+
+html.dark .border-slate-200 {
+  border-color: #38393e !important;
+}
+
+html.dark .border-slate-300 {
+  border-color: #45464c !important;
+}
+
+html.dark .border-slate-900 {
+  border-color: #56575d !important;
+}
+
+html.dark .ring-slate-200 {
+  --tw-ring-color: #3b3c41 !important;
+}
+
+/* Keep Fidar orange, but use it more like the warm accent in the reference. */
+html.dark .bg-orange-50,
+html.dark .bg-orange-50\/60 {
+  background-color: rgb(255 140 49 / 0.09) !important;
+}
+
+html.dark .bg-orange-100 {
+  background-color: rgb(255 140 49 / 0.14) !important;
+}
+
+html.dark .text-orange-600,
+html.dark .text-orange-700 {
+  color: #ff9a45 !important;
+}
+
+html.dark .border-orange-200,
+html.dark .border-orange-300 {
+  border-color: rgb(255 154 69 / 0.34) !important;
+}
+
+html.dark .ring-orange-100,
+html.dark .ring-orange-200 {
+  --tw-ring-color: rgb(255 154 69 / 0.16) !important;
+}
+
+/* Status surfaces remain readable without becoming neon. */
+html.dark .bg-red-50 {
+  background-color: rgb(127 29 29 / 0.22) !important;
+}
+
+html.dark .text-red-600,
+html.dark .text-red-700 {
+  color: #ff9f9f !important;
+}
+
+html.dark .border-red-100,
+html.dark .border-red-200,
+html.dark .border-red-300 {
+  border-color: rgb(248 113 113 / 0.34) !important;
+}
+
+html.dark .bg-green-50,
+html.dark .bg-green-100,
+html.dark .bg-emerald-50 {
+  background-color: rgb(6 78 59 / 0.22) !important;
+}
+
+html.dark .text-green-600,
+html.dark .text-green-700,
+html.dark .text-emerald-700 {
+  color: #7ddbb6 !important;
+}
+
+html.dark .border-green-200,
+html.dark .border-green-300,
+html.dark .border-emerald-200 {
+  border-color: rgb(52 211 153 / 0.3) !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: rgb(120 83 15 / 0.2) !important;
+}
+
+html.dark .text-amber-700,
+html.dark .text-amber-800 {
+  color: #e6c46a !important;
+}
+
+html.dark .border-amber-300,
+html.dark .border-amber-400 {
+  border-color: rgb(230 196 106 / 0.34) !important;
+}
+
+/* Inputs / selects / textareas use the same inset graphite surface as the reference. */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color-scheme: dark;
+}
+
+html.dark input.bg-white,
+html.dark select.bg-white,
+html.dark textarea.bg-white,
+html.dark input[class*="bg-white"],
+html.dark select[class*="bg-white"],
+html.dark textarea[class*="bg-white"] {
+  background-color: #1d1e22 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #74757a;
+}
+
+html.dark option {
+  background-color: #1d1e22;
+  color: #eeeeec;
+}
+
+html.dark .disabled\:bg-slate-100:disabled,
+html.dark .disabled\:bg-slate-200:disabled {
+  background-color: #2a2b2f !important;
+}
+
+html.dark .disabled\:text-slate-300:disabled,
+html.dark .disabled\:text-slate-400:disabled {
+  color: #66676c !important;
+}
+
+/* Quiet, premium hover states. */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #2a2b2f !important;
+}
+
+html.dark .hover\:bg-orange-50:hover,
+html.dark .hover\:bg-orange-100:hover {
+  background-color: rgb(255 140 49 / 0.14) !important;
+}
+
+html.dark .hover\:bg-red-50:hover {
+  background-color: rgb(127 29 29 / 0.28) !important;
+}
+
+/* Shadows are black/neutral instead of blue, closer to the reference image. */
+html.dark .shadow-sm {
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.18) !important;
+}
+
+html.dark .shadow-lg {
+  box-shadow: 0 14px 34px rgb(0 0 0 / 0.24) !important;
+}
+
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.32) !important;
+}
+
+html.dark .shadow-orange-100,
+html.dark .shadow-orange-200 {
+  --tw-shadow-color: rgb(0 0 0 / 0.28) !important;
+}
+
+/* Landing / authentication hero art becomes darker and more editorial. */
+html.dark img[alt="Fresh produce"],
+html.dark img[alt="Fresh fruits"] {
+  filter: grayscale(0.42) saturate(0.72) brightness(0.62) contrast(1.08);
+}
+
+html.dark img[alt="Fresh produce"] + div {
+  background: linear-gradient(
+    90deg,
+    #151619 0%,
+    rgb(21 22 25 / 0.82) 30%,
+    rgb(21 22 25 / 0.22) 68%,
+    rgb(21 22 25 / 0.06) 100%
+  ) !important;
+}
+
+html.dark img[alt="Fresh fruits"] + div {
+  background: linear-gradient(
+    90deg,
+    #212226 0%,
+    rgb(33 34 38 / 0.68) 30%,
+    rgb(33 34 38 / 0.08) 72%,
+    transparent 100%
+  ) !important;
+}
+
+/* Tailwind gradient helpers used elsewhere in auth/landing. */
+html.dark [class~="from-white"] {
+  --tw-gradient-from: #212226 var(--tw-gradient-from-position) !important;
+}
+
+html.dark [class~="via-white/20"] {
+  --tw-gradient-via: rgb(33 34 38 / 0.2) var(--tw-gradient-via-position) !important;
+}
+
+html.dark [class~="via-white/5"] {
+  --tw-gradient-via: rgb(33 34 38 / 0.05) var(--tw-gradient-via-position) !important;
+}
+
+/* Theme switch: small outlined utility control like the reference top navigation. */
+html.dark .theme-toggle {
+  background-color: #202125 !important;
+  border-color: #45464c !important;
+  color: #eeeeec !important;
+  box-shadow: none !important;
+}
+
+html.dark .theme-toggle:hover {
+  background-color: #2a2b2f !important;
+  border-color: rgb(255 154 69 / 0.58) !important;
+  color: #ff9a45 !important;
+}
+
+html.dark .border-white\/80 {
+  border-color: rgb(68 69 74 / 0.86) !important;
+}
+
+
+/* Native scrollbar treatment to match the neutral graphite UI. */
+html.dark {
+  scrollbar-color: #4a4b50 #1b1c1f;
+}
+
+html.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #1b1c1f;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4a4b50;
+  border: 2px solid #1b1c1f;
+  border-radius: 999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5b5c62;
+}
+
+/* --------------------------------------------------------------------------
+   Dark-theme refinement v2
+   - Remove the white logo plate
+   - Use a deeper burnt-orange accent
+   - Remove pale/white chart fill from dashboard charts
+   -------------------------------------------------------------------------- */
+
+/* Darker, calmer Fidar orange for dark mode only. */
+html.dark .bg-orange-500 {
+  background-color: #d8751f !important;
+}
+
+html.dark .hover\:bg-orange-600:hover {
+  background-color: #b95f18 !important;
+}
+
+html.dark .text-orange-500,
+html.dark .text-orange-600,
+html.dark .text-orange-700 {
+  color: #df8738 !important;
+}
+
+html.dark .border-orange-400,
+html.dark .border-orange-500,
+html.dark .border-orange-600 {
+  border-color: #d8751f !important;
+}
+
+html.dark .bg-orange-50,
+html.dark .bg-orange-50\/60 {
+  background-color: rgb(216 117 31 / 0.08) !important;
+}
+
+html.dark .bg-orange-100 {
+  background-color: rgb(216 117 31 / 0.13) !important;
+}
+
+html.dark .border-orange-200,
+html.dark .border-orange-300 {
+  border-color: rgb(216 117 31 / 0.30) !important;
+}
+
+html.dark .ring-orange-100,
+html.dark .ring-orange-200 {
+  --tw-ring-color: rgb(216 117 31 / 0.15) !important;
+}
+
+/* Logo asset is already transparent. Do not put it on a white rectangle. */
+html.dark img[alt="Fidar Imex Private Limited"] {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  filter:
+    brightness(1.08)
+    contrast(1.08)
+    drop-shadow(0 5px 12px rgb(0 0 0 / 0.28));
+}
+
+/* Dashboard chart: replace the pale orange/white area with dark bronze. */
+html.dark svg polygon[fill="#fff7ed"] {
+  fill: #30251e !important;
+}
+
+/* Chart grid, line and labels should sit naturally on graphite cards. */
+html.dark svg line[stroke="#e2e8f0"] {
+  stroke: #3d3e42 !important;
+}
+
+html.dark svg polyline[stroke="#f97316"] {
+  stroke: #d8751f !important;
+}
+
+html.dark svg circle[fill="#f97316"] {
+  fill: #d8751f !important;
+}
+
+html.dark svg text[fill="#64748b"] {
+  fill: #8f9094 !important;
+}
+
+/* Use the same deeper accent for utility hover states. */
+html.dark .theme-toggle:hover {
+  border-color: rgb(216 117 31 / 0.58) !important;
+  color: #df8738 !important;
+}
+
+html.dark .hover\:border-orange-500:hover {
+  border-color: #d8751f !important;
+}
+
+html.dark .hover\:text-orange-600:hover,
+html.dark .hover\:text-orange-700:hover {
+  color: #df8738 !important;
+}
+

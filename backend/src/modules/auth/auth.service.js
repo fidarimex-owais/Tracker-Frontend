@@ -26,12 +26,23 @@ const SALT_ROUNDS = 12;
 
 // Build safe user and signup-request responses
 
+const buildProfileId = (user) => {
+  const rawId = String(user?._id || user?.id || '');
+
+  return rawId
+    ? `FID-${rawId.slice(-12).toUpperCase()}`
+    : '';
+};
+
 const sanitizeUser = (user) => ({
   id: user._id.toString(),
+  profileId: buildProfileId(user),
   userName: user.userName || '',
+  fullName: user.userName || '',
   brandName: getEffectiveBrand(user),
   mobileNumber: user.mobileNumber || '',
   email: user.email,
+  profilePicture: user.profilePicture || '',
   role: user.role,
   isActive: user.isActive,
   createdAt: user.createdAt,
@@ -219,6 +230,35 @@ const getUserById = async (id) => {
   return sanitizeUser(user);
 };
 
+
+// Update the authenticated user's own editable profile fields
+
+const updateProfile = async (
+  userId,
+  {
+    fullName,
+    mobileNumber,
+    profilePicture,
+  }
+) => {
+  const user = await findUserById(userId);
+
+  if (!user) {
+    throw createHttpError(
+      404,
+      'User account no longer exists'
+    );
+  }
+
+  user.userName = fullName;
+  user.mobileNumber = mobileNumber;
+  user.profilePicture = profilePicture;
+
+  await user.save();
+
+  return sanitizeUser(user);
+};
+
 // Create and verify JWT authentication tokens
 
 const signToken = (user) => {
@@ -333,4 +373,6 @@ module.exports = {
   verifyToken,
   ensureAdminUser,
   sanitizeUser,
+  buildProfileId,
+  updateProfile,
 };
