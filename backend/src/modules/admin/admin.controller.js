@@ -35,6 +35,35 @@ const listActiveIds = async (req, res) => {
   });
 };
 
+
+const listIdentityDocuments = async (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Pragma', 'no-cache');
+
+  const records = await service.listIdentitySubmissions();
+
+  res.json({
+    success: true,
+    records,
+  });
+};
+
+const openIdentityDocument = async (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Pragma', 'no-cache');
+
+  const access = await service.getIdentityDocumentAccess(
+    req.params.source,
+    req.params.id,
+    req.params.documentId
+  );
+
+  res.json({
+    success: true,
+    ...access,
+  });
+};
+
 // Signup request review handlers
 
 const listSignupRequests = async (req, res) => {
@@ -62,7 +91,8 @@ const getSignupRequestCount = async (req, res) => {
 const approveSignupRequest = async (req, res) => {
   const user = await service.approveSignupRequest(
     req.params.id,
-    req.user
+    req.user,
+    req.body?.vendorId || ''
   );
 
   res.json({
@@ -110,16 +140,16 @@ const updateRole = async (req, res) => {
   });
 };
 
-const updateBrand = async (req, res) => {
-  const user = await service.updateBrand(
+const updateVendor = async (req, res) => {
+  const user = await service.updateVendor(
     req.params.id,
-    req.body.brandName,
+    req.body.vendorId,
     req.user
   );
 
   res.json({
     success: true,
-    message: 'Brand updated',
+    message: 'Supervisor Vendor updated',
     user,
   });
 };
@@ -160,13 +190,15 @@ module.exports = {
   getDashboard,
   createUser,
   listActiveIds,
+  listIdentityDocuments,
+  openIdentityDocument,
   listSignupRequests,
   getSignupRequestCount,
   approveSignupRequest,
   rejectSignupRequest,
   listUsers,
   updateRole,
-  updateBrand,
+  updateVendor,
   updateStatus,
   deleteUser,
 };

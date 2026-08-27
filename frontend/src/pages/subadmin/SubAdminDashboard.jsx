@@ -16,7 +16,7 @@ const EMPTY = {
     vendors: 0,
     supervisors: 0,
   },
-  brandSummary: [],
+  vendorSummary: [],
   signupTrend: [],
   recentSignupRequests: [],
 };
@@ -97,7 +97,7 @@ export default function SubAdminDashboard() {
           </h2>
 
           <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
-            Monitor Vendor and Supervisor activity across all brands.
+            Monitor Vendor accounts and Supervisor-to-Vendor assignments across the system.
           </p>
         </div>
 
@@ -131,9 +131,9 @@ export default function SubAdminDashboard() {
           />
         </DashboardPanel>
 
-        <DashboardPanel title="Brand Summary">
-          <BrandSummary
-            rows={dashboard.brandSummary}
+        <DashboardPanel title="Vendor Assignment Summary">
+          <VendorSummary
+            rows={dashboard.vendorSummary}
             loading={loading}
           />
         </DashboardPanel>
@@ -226,7 +226,7 @@ function BreakdownRow({ label, value, dot, loading }) {
   );
 }
 
-function BrandSummary({ rows, loading }) {
+function VendorSummary({ rows, loading }) {
   if (loading) {
     return (
       <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
@@ -238,7 +238,7 @@ function BrandSummary({ rows, loading }) {
   if (rows.length === 0) {
     return (
       <div className="py-7 text-center text-xs text-slate-400 sm:py-10 sm:text-sm">
-        No brand data yet.
+        No Vendor assignment data yet.
       </div>
     );
   }
@@ -248,24 +248,15 @@ function BrandSummary({ rows, loading }) {
       <div className="space-y-2 sm:hidden">
         {rows.map((row) => (
           <div
-            key={row.brandName}
+            key={row.vendorId}
             className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"
           >
             <div className="flex items-center justify-between gap-2">
               <strong className="min-w-0 truncate text-xs text-slate-800">
-                {row.brandName}
+                {row.vendorName}
               </strong>
               <span className="shrink-0 rounded-md bg-orange-50 px-2 py-1 text-[10px] font-extrabold text-orange-600">
-                Total {row.totalUsers}
-              </span>
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-              <span>
-                Vendors <strong className="text-slate-800">{row.vendors}</strong>
-              </span>
-              <span>
-                Supervisors <strong className="text-slate-800">{row.supervisors}</strong>
+                {row.supervisors} Supervisor{row.supervisors === 1 ? '' : 's'}
               </span>
             </div>
           </div>
@@ -273,30 +264,22 @@ function BrandSummary({ rows, loading }) {
       </div>
 
       <div className="hidden overflow-x-auto sm:block">
-        <table className="w-full min-w-[520px] text-sm">
+        <table className="w-full min-w-[420px] text-sm">
           <thead>
             <tr className="bg-orange-50 text-left text-xs uppercase tracking-wide text-slate-600">
-              <th className="rounded-l-lg px-3 py-2.5">Brand</th>
-              <th className="px-3 py-2.5 text-center">Vendors</th>
-              <th className="px-3 py-2.5 text-center">Supervisors</th>
-              <th className="rounded-r-lg px-3 py-2.5 text-center">Total</th>
+              <th className="rounded-l-lg px-3 py-2.5">Vendor</th>
+              <th className="rounded-r-lg px-3 py-2.5 text-center">Supervisors</th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-slate-100">
             {rows.map((row) => (
-              <tr key={row.brandName}>
+              <tr key={row.vendorId}>
                 <td className="px-3 py-3 font-semibold text-slate-800">
-                  {row.brandName}
-                </td>
-                <td className="px-3 py-3 text-center text-slate-600">
-                  {row.vendors}
-                </td>
-                <td className="px-3 py-3 text-center text-slate-600">
-                  {row.supervisors}
+                  {row.vendorName}
                 </td>
                 <td className="px-3 py-3 text-center font-bold text-orange-600">
-                  {row.totalUsers}
+                  {row.supervisors}
                 </td>
               </tr>
             ))}
@@ -470,7 +453,7 @@ function RecentRequests({
 
             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-slate-500">
               <span className="truncate">
-                Brand: <strong className="text-slate-700">{request.brandName || '—'}</strong>
+                Vendor: <strong className="text-slate-700">{request.role === 'supervisor' ? request.vendorName || 'Unassigned' : 'Not applicable'}</strong>
               </span>
               <span className="truncate">
                 Role: <strong className="text-slate-700">{roleLabel(request.role)}</strong>
@@ -488,7 +471,7 @@ function RecentRequests({
           <thead>
             <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="rounded-l-lg px-3 py-2.5">Name</th>
-              <th className="px-3 py-2.5">Brand</th>
+              <th className="px-3 py-2.5">Vendor</th>
               <th className="px-3 py-2.5">Role</th>
               <th className="px-3 py-2.5">Email</th>
               <th className="rounded-r-lg px-3 py-2.5">Requested</th>
@@ -502,7 +485,7 @@ function RecentRequests({
                   {request.userName || '—'}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
-                  {request.brandName || '—'}
+                  {request.role === 'supervisor' ? request.vendorName || 'Unassigned' : 'Not applicable'}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
                   {roleLabel(request.role)}

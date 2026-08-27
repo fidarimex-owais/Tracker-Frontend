@@ -31,6 +31,11 @@ export const getPortalDashboard = async (actorRole) => {
   ).data;
 };
 
+export const getVendorOptions = async () =>
+  (
+    await api.get('/api/auth/vendors')
+  ).data;
+
 const portalBase = (actorRole) => {
   if (actorRole === 'admin') {
     return '/api/admin';
@@ -90,11 +95,13 @@ export const getSignupRequestCount = async (
 
 export const approveSignupRequest = async (
   id,
-  actorRole
+  actorRole,
+  vendorId = ''
 ) =>
   (
     await api.patch(
-      `${portalBase(actorRole)}/signup-requests/${id}/approve`
+      `${portalBase(actorRole)}/signup-requests/${id}/approve`,
+      vendorId ? { vendorId } : {}
     )
   ).data;
 
@@ -129,15 +136,15 @@ export const updateUserRole = async (
     )
   ).data;
 
-export const updateUserBrand = async (
+export const updateUserVendor = async (
   id,
-  brandName,
+  vendorId,
   actorRole = 'admin'
 ) =>
   (
     await api.patch(
-      `${userBase(actorRole)}/${id}/brand`,
-      { brandName }
+      `${userBase(actorRole)}/${id}/vendor`,
+      { vendorId }
     )
   ).data;
 
@@ -161,5 +168,21 @@ export const deleteUser = async (
   (
     await api.delete(
       `${userBase(actorRole)}/${id}`
+    )
+  ).data;
+
+export const getIdentityDocuments = async () =>
+  (
+    await api.get('/api/admin/identity-documents')
+  ).data;
+
+export const getIdentityDocumentAccess = async (
+  source,
+  recordId,
+  documentId
+) =>
+  (
+    await api.get(
+      `/api/admin/identity-documents/${source}/${recordId}/documents/${documentId}/open`
     )
   ).data;

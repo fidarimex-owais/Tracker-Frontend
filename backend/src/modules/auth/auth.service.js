@@ -4,12 +4,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const {
-  BRAND_OPTIONS,
-  getEffectiveBrand,
   getUserModel,
   ensureCredentialCollection,
   findUserByEmail,
   findUserById,
+  findActiveVendorById,
+  listActiveVendors,
 } = require('./auth.model');
 
 const {
@@ -19,6 +19,11 @@ const {
 } = require('./signupRequest.model');
 
 const { verifyGoogleIdToken } = require('./googleIdentity.service');
+
+const {
+  createIdentityRecord,
+  cleanupDocuments,
+} = require('../identity/identity.service');
 
 // Password hashing configuration
 
@@ -39,7 +44,9 @@ const sanitizeUser = (user) => ({
   profileId: buildProfileId(user),
   userName: user.userName || '',
   fullName: user.userName || '',
-  brandName: getEffectiveBrand(user),
+  brandName: '',
+  vendorId: user.vendorId ? user.vendorId.toString() : '',
+  vendorName: user.vendorName || '',
   mobileNumber: user.mobileNumber || '',
   email: user.email,
   profilePicture: user.profilePicture || '',
@@ -51,7 +58,9 @@ const sanitizeUser = (user) => ({
 
 const sanitizeSignupRequest = (request) => ({
   id: request._id.toString(),
-  brandName: request.brandName,
+  brandName: '',
+  vendorId: request.vendorId ? request.vendorId.toString() : '',
+  vendorName: request.vendorName || '',
   userName: request.userName,
   mobileNumber: request.mobileNumber,
   email: request.email,
@@ -67,7 +76,7 @@ const createHttpError = (statusCode, message) => {
   return error;
 };
 
-// Verify account status, role, and required brand assignment
+// Verify account status and requested portal role
 
 const assertUserCanAccessPortal = (user, requestedRole) => {
   if (!user || user.role !== requestedRole) {
@@ -77,47 +86,49 @@ const assertUserCanAccessPortal = (user, requestedRole) => {
   if (!user.isActive) {
     throw createHttpError(403, 'This account has been deactivated');
   }
-
-  if (
-    ['vendor', 'supervisor'].includes(user.role) &&
-    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
-  ) {
-    throw createHttpError(
-      403,
-      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
-    );
-  }
 };
 
 // Create a pending Vendor or Supervisor signup request
 
 const signup = async ({
-  brandName,
+  vendorId,
   userName,
   mobileNumber,
   email,
   role,
   password,
+  panNumber,
+  aadhaarNumber,
+  documents,
 }) => {
   const normalizedEmail = email.trim().toLowerCase();
-
-  if (!BRAND_OPTIONS.includes(brandName)) {
-    throw createHttpError(400, 'Select a valid brand');
-  }
-
   const eligibleApproverRoles =
     getApproverRolesForRequestRole(role);
 
   if (eligibleApproverRoles.length === 0) {
     throw createHttpError(
       403,
-      'Public signup is available only for Vendor or Supervisor'
+      'Public signup is available only for Sub-Admin, Vendor, or Supervisor'
     );
   }
 
-  const [existingUser, existingSignupRequest] = await Promise.all([
+  const vendorPromise =
+    role === 'supervisor'
+      ? findActiveVendorById(vendorId)
+      : Promise.resolve(null);
+
+  // Run independent checks and password hashing concurrently to reduce signup
+  // latency without reducing bcrypt strength or validation coverage.
+  const [
+    existingUser,
+    existingSignupRequest,
+    selectedVendor,
+    passwordHash,
+  ] = await Promise.all([
     findUserByEmail(normalizedEmail),
     findSignupRequestByEmail(normalizedEmail),
+    vendorPromise,
+    bcrypt.hash(password, SALT_ROUNDS),
   ]);
 
   if (existingUser || existingSignupRequest) {
@@ -127,23 +138,39 @@ const signup = async ({
     );
   }
 
-  const SignupRequest = getSignupRequestModel();
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  if (role === 'supervisor' && !selectedVendor) {
+    throw createHttpError(
+      400,
+      'Select an active Vendor'
+    );
+  }
 
+  const identity = await createIdentityRecord({
+    panNumber,
+    aadhaarNumber,
+    documents,
+    folderKey: `signup-${normalizedEmail}`,
+  });
+
+  const SignupRequest = getSignupRequestModel();
   let request;
 
   try {
     request = await SignupRequest.create({
-      brandName,
+      brandName: '',
+      vendorId: selectedVendor?._id || null,
+      vendorName: selectedVendor?.userName || '',
       userName,
       mobileNumber,
       email: normalizedEmail,
       role,
       passwordHash,
+      identity,
       eligibleApproverRoles,
       status: 'pending',
     });
   } catch (error) {
+    await cleanupDocuments(identity.documents);
     if (error?.code === 11000) {
       throw createHttpError(
         409,
@@ -155,6 +182,15 @@ const signup = async ({
   }
 
   return sanitizeSignupRequest(request);
+};
+
+const listVendorOptions = async () => {
+  const vendors = await listActiveVendors();
+
+  return vendors.map((vendor) => ({
+    id: vendor._id.toString(),
+    userName: vendor.userName || 'Unnamed Vendor',
+  }));
 };
 
 // Authenticate users with email and password
@@ -217,16 +253,6 @@ const getUserById = async (id) => {
     throw createHttpError(403, 'This account has been deactivated');
   }
 
-  if (
-    ['vendor', 'supervisor'].includes(user.role) &&
-    !BRAND_OPTIONS.includes(getEffectiveBrand(user))
-  ) {
-    throw createHttpError(
-      403,
-      'This account does not have a valid brand assignment. Contact an Admin or Sub-Admin.'
-    );
-  }
-
   return sanitizeUser(user);
 };
 
@@ -250,11 +276,29 @@ const updateProfile = async (
     );
   }
 
+  const vendorNameChanged =
+    user.role === 'vendor' &&
+    user.userName !== fullName;
+
   user.userName = fullName;
   user.mobileNumber = mobileNumber;
   user.profilePicture = profilePicture;
 
   await user.save();
+
+  if (vendorNameChanged) {
+    await getUserModel().updateMany(
+      {
+        role: 'supervisor',
+        vendorId: user._id,
+      },
+      {
+        $set: {
+          vendorName: fullName,
+        },
+      }
+    );
+  }
 
   return sanitizeUser(user);
 };
@@ -366,6 +410,7 @@ const ensureAdminUser = async () => {
 
 module.exports = {
   signup,
+  listVendorOptions,
   login,
   googleLogin,
   getUserById,

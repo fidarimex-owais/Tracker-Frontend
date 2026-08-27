@@ -2,23 +2,22 @@
 
 const mongoose = require('mongoose');
 const { getUserDb } = require('../../config/db');
-const {
-  BRAND_OPTIONS,
-  getEffectiveBrand,
-} = require('./auth.model');
+const { identitySchema } = require('../identity/identity.schema');
 
 const PUBLIC_SIGNUP_ROLES = [
+  'subadmin',
   'vendor',
   'supervisor',
 ];
 
 const APPROVER_ROLES_BY_REQUEST_ROLE = {
+  subadmin: ['admin'],
   vendor: ['admin', 'subadmin'],
   supervisor: ['admin', 'subadmin', 'vendor'],
 };
 
 const REQUEST_ROLES_BY_APPROVER = {
-  admin: ['vendor', 'supervisor'],
+  admin: ['subadmin', 'vendor', 'supervisor'],
   subadmin: ['vendor', 'supervisor'],
   vendor: ['supervisor'],
   supervisor: [],
@@ -45,9 +44,9 @@ const decisionSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Legacy field retained for older decision history only.
     decidedByBrand: {
       type: String,
-      enum: ['', ...BRAND_OPTIONS],
       default: '',
     },
 
@@ -66,15 +65,28 @@ const decisionSchema = new mongoose.Schema(
 
 const signupRequestSchema = new mongoose.Schema(
   {
+    // Legacy fields retained for reading older pending requests. New requests do
+    // not associate Vendor or Supervisor accounts with brands.
     brandName: {
       type: String,
-      enum: BRAND_OPTIONS,
-      required: true,
+      trim: true,
+      default: '',
+    },
+
+    companyName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    // Supervisor requests point directly to the selected Vendor.
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
       index: true,
     },
 
-    // Legacy field retained only for reading older pending requests.
-    companyName: {
+    vendorName: {
       type: String,
       trim: true,
       default: '',
@@ -113,6 +125,15 @@ const signupRequestSchema = new mongoose.Schema(
       select: false,
     },
 
+
+    // Sensitive registration identity data is hidden from all ordinary signup
+    // request queries. Only Admin-only endpoints explicitly select it.
+    identity: {
+      type: identitySchema,
+      select: false,
+      default: undefined,
+    },
+
     eligibleApproverRoles: {
       type: [String],
       enum: ['admin', 'subadmin', 'vendor'],
@@ -143,9 +164,9 @@ const signupRequestSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Legacy field retained for older review history only.
     reviewedByBrand: {
       type: String,
-      enum: ['', ...BRAND_OPTIONS],
       default: '',
     },
 
@@ -167,14 +188,22 @@ const signupRequestSchema = new mongoose.Schema(
 signupRequestSchema.index({
   status: 1,
   role: 1,
-  brandName: 1,
+  vendorId: 1,
   createdAt: -1,
+});
+
+signupRequestSchema.pre('validate', function normalizeSignupRelationship() {
+  this.brandName = '';
+  this.companyName = '';
+
+  if (this.role !== 'supervisor') {
+    this.vendorId = null;
+    this.vendorName = '';
+  }
 });
 
 const MODEL_NAME = 'SignupRequest';
 const COLLECTION_NAME = 'signup_requests';
-
-// Initialize and access the signup request collection
 
 const getSignupRequestModel = () => {
   const userDb = getUserDb();
@@ -190,45 +219,16 @@ const getSignupRequestModel = () => {
   );
 };
 
-// Resolve signup review permissions by role
-
 const getApproverRolesForRequestRole = (role) =>
   APPROVER_ROLES_BY_REQUEST_ROLE[role] || [];
 
 const getRequestRolesForApprover = (actorRole) =>
   REQUEST_ROLES_BY_APPROVER[actorRole] || [];
 
-const getRequestBrand = (request) => {
-  if (!request) {
-    return '';
-  }
-
-  if (BRAND_OPTIONS.includes(request.brandName)) {
-    return request.brandName;
-  }
-
-  if (BRAND_OPTIONS.includes(request.companyName)) {
-    return request.companyName;
-  }
-
-  return '';
+const getRequestVendorId = (request) => {
+  const value = request?.vendorId;
+  return value ? value.toString() : '';
 };
-
-const buildRequestBrandFilter = (brandName) => ({
-  $or: [
-    {
-      brandName,
-    },
-    {
-      brandName: {
-        $in: ['', null],
-      },
-      companyName: brandName,
-    },
-  ],
-});
-
-// Build the database filter for requests the current actor may review
 
 const buildReviewFilterForActor = (actor) => {
   const requestRoles = getRequestRolesForApprover(
@@ -246,16 +246,7 @@ const buildReviewFilterForActor = (actor) => {
   };
 
   if (actor.role === 'vendor') {
-    const actorBrand = getEffectiveBrand(actor);
-
-    if (!BRAND_OPTIONS.includes(actorBrand)) {
-      return null;
-    }
-
-    Object.assign(
-      filter,
-      buildRequestBrandFilter(actorBrand)
-    );
+    filter.vendorId = actor.id;
   }
 
   return filter;
@@ -274,15 +265,8 @@ const canActorReviewRequest = (actor, request) => {
     return true;
   }
 
-  const actorBrand = getEffectiveBrand(actor);
-  const requestBrand = getRequestBrand(request);
-
-  return (
-    BRAND_OPTIONS.includes(actorBrand) &&
-    actorBrand === requestBrand
-  );
+  return getRequestVendorId(request) === actor.id;
 };
-
 
 // Signup request lookup helpers
 
@@ -325,7 +309,10 @@ const findPendingSignupRequestByEmail = async (email) => {
 
 const findSignupRequestById = async (
   id,
-  { includePassword = false } = {}
+  {
+    includePassword = false,
+    includeIdentity = false,
+  } = {}
 ) => {
   if (!mongoose.isValidObjectId(id)) {
     return null;
@@ -338,10 +325,12 @@ const findSignupRequestById = async (
     query.select('+passwordHash');
   }
 
+  if (includeIdentity) {
+    query.select('+identity');
+  }
+
   return query;
 };
-
-// List and count pending requests visible to the current actor
 
 const listPendingSignupRequestsForActor = async (actor) => {
   const reviewFilter = buildReviewFilterForActor(actor);
@@ -350,12 +339,11 @@ const listPendingSignupRequestsForActor = async (actor) => {
     return [];
   }
 
-  const SignupRequest = getSignupRequestModel();
-
-  return SignupRequest.find({
-    status: 'pending',
-    ...reviewFilter,
-  })
+  return getSignupRequestModel()
+    .find({
+      status: 'pending',
+      ...reviewFilter,
+    })
     .sort({
       createdAt: -1,
     })
@@ -369,15 +357,11 @@ const countPendingSignupRequestsForActor = async (actor) => {
     return 0;
   }
 
-  const SignupRequest = getSignupRequestModel();
-
-  return SignupRequest.countDocuments({
+  return getSignupRequestModel().countDocuments({
     status: 'pending',
     ...reviewFilter,
   });
 };
-
-// Export signup request model helpers
 
 module.exports = {
   PUBLIC_SIGNUP_ROLES,
@@ -386,7 +370,7 @@ module.exports = {
   getSignupRequestModel,
   getApproverRolesForRequestRole,
   getRequestRolesForApprover,
-  getRequestBrand,
+  getRequestVendorId,
   buildReviewFilterForActor,
   canActorReviewRequest,
   findSignupRequestByEmail,

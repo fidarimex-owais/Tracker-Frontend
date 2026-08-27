@@ -7,7 +7,7 @@ import { useAuth } from '../../auth/useAuth';
 import { getPortalDashboard } from '../../services/adminService';
 
 const EMPTY = {
-  brandName: '',
+  vendorName: '',
   summary: {
     totalSupervisors: 0,
     activeSupervisors: 0,
@@ -101,7 +101,7 @@ export default function VendorDashboard() {
           </h2>
 
           <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
-            Manage Supervisors and signup requests for your assigned brand.
+            Manage Supervisors and signup requests assigned directly to your Vendor account.
           </p>
         </div>
 
@@ -128,16 +128,16 @@ export default function VendorDashboard() {
       </div>
 
       <div className="grid min-w-0 gap-3 sm:gap-5 xl:grid-cols-[0.8fr_0.8fr_1.3fr]">
-        <DashboardPanel title="Assigned Brand">
+        <DashboardPanel title="Vendor Account">
           <div className="flex min-h-28 flex-col items-center justify-center rounded-lg bg-orange-50 px-3 py-4 text-center sm:min-h-44 sm:rounded-xl sm:px-5">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white sm:h-14 sm:w-14">
               <BrandIcon />
             </span>
             <p className="mt-2 text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:mt-4 sm:text-xs">
-              Your Brand
+              Vendor
             </p>
             <p className="mt-0.5 max-w-full truncate text-lg font-extrabold text-slate-900 sm:mt-1 sm:text-2xl">
-              {loading ? '—' : dashboard.brandName || 'Not Assigned'}
+              {loading ? '—' : dashboard.vendorName || user.userName || 'Vendor'}
             </p>
           </div>
         </DashboardPanel>
@@ -467,7 +467,7 @@ function RecentRequests({
 
             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-slate-500">
               <span className="truncate">
-                Brand: <strong className="text-slate-700">{request.brandName || '—'}</strong>
+                Vendor: <strong className="text-slate-700">{request.vendorName || 'Assigned to you'}</strong>
               </span>
               <span className="truncate">
                 Role: <strong className="text-slate-700">{roleLabel(request.role)}</strong>
@@ -485,7 +485,7 @@ function RecentRequests({
           <thead>
             <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <th className="rounded-l-lg px-3 py-2.5">Name</th>
-              <th className="px-3 py-2.5">Brand</th>
+              <th className="px-3 py-2.5">Vendor</th>
               <th className="px-3 py-2.5">Role</th>
               <th className="px-3 py-2.5">Email</th>
               <th className="rounded-r-lg px-3 py-2.5">Requested</th>
@@ -499,7 +499,7 @@ function RecentRequests({
                   {request.userName || '—'}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
-                  {request.brandName || '—'}
+                  {request.vendorName || 'Assigned to you'}
                 </td>
                 <td className="px-3 py-3 text-slate-600">
                   {roleLabel(request.role)}

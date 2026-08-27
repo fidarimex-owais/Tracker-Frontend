@@ -1,15 +1,21 @@
 // frontend/src/pages/admin/CreateId.jsx
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
-import { createId } from '../../services/adminService';
-
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Banana Man',
-  'Joker',
-]
+import {
+  createId,
+  getVendorOptions,
+} from '../../services/adminService';
+import {
+  filesToIdentityPayload,
+  formatBytes,
+  isValidAadhaar,
+  isValidPan,
+  normalizeAadhaar,
+  normalizePan,
+  validateIdentityFiles,
+} from '../../utils/identityRegistration';
 
 const ROLE_OPTIONS = {
   admin: [
@@ -27,16 +33,13 @@ const ROLE_OPTIONS = {
   supervisor: [],
 };
 
-const BRAND_REQUIRED_ROLES = new Set([
-  'vendor',
-  'supervisor',
-]);
-
 const INITIAL_FORM = {
-  brandName: '',
+  vendorId: '',
   userName: '',
   mobileNumber: '',
   email: '',
+  panNumber: '',
+  aadhaarNumber: '',
   role: '',
   password: '',
   confirmPassword: '',
@@ -62,6 +65,9 @@ const userPageForRole = (role) => {
 export default function CreateId() {
   const { user } = useAuth();
   const [form, setForm] = useState(INITIAL_FORM);
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [documents, setDocuments] = useState([]);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -72,42 +78,90 @@ export default function CreateId() {
     [user.role]
   );
 
-  const requiresBrand = BRAND_REQUIRED_ROLES.has(
-    form.role
-  );
+  const isSupervisor = form.role === 'supervisor';
+  const needsVendorDropdown =
+    isSupervisor && user.role !== 'vendor';
 
-  const selectedBrand =
-    user.role === 'vendor'
-      ? user.brandName || ''
-      : form.brandName;
+  useEffect(() => {
+    if (!needsVendorDropdown) {
+      return;
+    }
+
+    let active = true;
+    setVendorsLoading(true);
+
+    getVendorOptions()
+      .then((result) => {
+        if (active) {
+          setVendors(result.vendors || []);
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(
+            requestError.response?.data?.message ||
+              requestError.message ||
+              'Unable to load Vendors'
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setVendorsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [needsVendorDropdown]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    const nextValue =
+      name === 'panNumber'
+        ? normalizePan(value)
+        : name === 'aadhaarNumber'
+          ? normalizeAadhaar(value)
+          : value;
 
-    setForm((current) => {
-      const next = {
-        ...current,
-        [name]: value,
-      };
-
-      if (
-        name === 'role' &&
-        !BRAND_REQUIRED_ROLES.has(value)
-      ) {
-        next.brandName = '';
-      }
-
-      return next;
-    });
+    setForm((current) => ({
+      ...current,
+      [name]: nextValue,
+      ...(name === 'role' && value !== 'supervisor'
+        ? { vendorId: '' }
+        : {}),
+    }));
 
     setFieldErrors((current) => ({
       ...current,
       [name]: '',
-      ...(name === 'role'
-        ? { brandName: '' }
-        : {}),
+      ...(name === 'role' ? { vendorId: '' } : {}),
     }));
 
+    setError('');
+    setSuccess('');
+  };
+
+  const handleDocumentsChange = (event) => {
+    const nextDocuments = Array.from(event.target.files || []);
+    const documentError = validateIdentityFiles(nextDocuments);
+
+    if (documentError) {
+      setDocuments([]);
+      setFieldErrors((current) => ({
+        ...current,
+        documents: documentError,
+      }));
+      event.target.value = '';
+      return;
+    }
+
+    setDocuments(nextDocuments);
+    setFieldErrors((current) => ({
+      ...current,
+      documents: '',
+    }));
     setError('');
     setSuccess('');
   };
@@ -119,14 +173,8 @@ export default function CreateId() {
       errors.role = 'Select an authorized role';
     }
 
-    if (
-      requiresBrand &&
-      !BRAND_OPTIONS.includes(selectedBrand)
-    ) {
-      errors.brandName =
-        user.role === 'vendor'
-          ? 'Your Vendor account needs a valid brand assignment'
-          : 'Select a brand';
+    if (needsVendorDropdown && !form.vendorId) {
+      errors.vendorId = 'Select a Vendor';
     }
 
     if (form.userName.trim().length < 2) {
@@ -145,6 +193,19 @@ export default function CreateId() {
       errors.email = 'Enter a valid email address';
     }
 
+    if (!isValidPan(form.panNumber)) {
+      errors.panNumber = 'Enter a valid PAN number (for example ABCDE1234F)';
+    }
+
+    if (!isValidAadhaar(form.aadhaarNumber)) {
+      errors.aadhaarNumber = 'Enter a valid 12-digit Aadhaar number';
+    }
+
+    const documentError = validateIdentityFiles(documents);
+    if (documentError) {
+      errors.documents = documentError;
+    }
+
     if (form.password.length < 8) {
       errors.password = 'Password must be at least 8 characters';
     }
@@ -154,7 +215,6 @@ export default function CreateId() {
     }
 
     setFieldErrors(errors);
-
     return Object.keys(errors).length === 0;
   };
 
@@ -170,15 +230,22 @@ export default function CreateId() {
     setBusy(true);
 
     try {
+      const documentPayload = await filesToIdentityPayload(documents);
       const result = await createId(
         {
-          ...form,
-          brandName: requiresBrand
-            ? selectedBrand
-            : '',
+          vendorId:
+            isSupervisor && user.role !== 'vendor'
+              ? form.vendorId
+              : '',
           userName: form.userName.trim(),
           mobileNumber: form.mobileNumber.trim(),
           email: form.email.trim(),
+          panNumber: normalizePan(form.panNumber),
+          aadhaarNumber: normalizeAadhaar(form.aadhaarNumber),
+          documents: documentPayload,
+          role: form.role,
+          password: form.password,
+          confirmPassword: form.confirmPassword,
         },
         user.role
       );
@@ -188,6 +255,7 @@ export default function CreateId() {
       );
 
       setForm(INITIAL_FORM);
+      setDocuments([]);
       setFieldErrors({});
     } catch (requestError) {
       const data = requestError.response?.data;
@@ -245,7 +313,7 @@ export default function CreateId() {
         </h2>
 
         <p className="mt-2 text-slate-500">
-          Vendor and Supervisor IDs are always assigned to one brand.
+          Vendor IDs are brand-independent. Supervisor IDs are assigned directly to a Vendor.
         </p>
       </div>
 
@@ -296,33 +364,38 @@ export default function CreateId() {
             </select>
           </Field>
 
-          {requiresBrand ? (
+          {isSupervisor ? (
             <Field
-              label="Brand"
-              error={fieldErrors.brandName}
+              label="Vendor"
+              error={fieldErrors.vendorId}
             >
               {user.role === 'vendor' ? (
                 <input
                   type="text"
                   readOnly
-                  value={selectedBrand || 'No brand assigned'}
-                  className={inputClass(fieldErrors.brandName)}
+                  value={user.userName || 'Current Vendor'}
+                  className={inputClass(fieldErrors.vendorId)}
                 />
               ) : (
                 <select
-                  name="brandName"
-                  value={form.brandName}
+                  name="vendorId"
+                  value={form.vendorId}
                   onChange={handleChange}
-                  className={inputClass(fieldErrors.brandName)}
+                  disabled={vendorsLoading}
+                  className={inputClass(fieldErrors.vendorId)}
                 >
-                  <option value="">Select brand</option>
+                  <option value="">
+                    {vendorsLoading
+                      ? 'Loading Vendors...'
+                      : 'Select Vendor'}
+                  </option>
 
-                  {BRAND_OPTIONS.map((brand) => (
+                  {vendors.map((vendor) => (
                     <option
-                      key={brand}
-                      value={brand}
+                      key={vendor.id}
+                      value={vendor.id}
                     >
-                      {brand}
+                      {vendor.userName}
                     </option>
                   ))}
                 </select>
@@ -374,7 +447,68 @@ export default function CreateId() {
             />
           </Field>
 
-          <div />
+          <Field
+            label="PAN Card Number"
+            error={fieldErrors.panNumber}
+          >
+            <input
+              type="text"
+              name="panNumber"
+              maxLength="10"
+              autoComplete="off"
+              value={form.panNumber}
+              onChange={handleChange}
+              placeholder="ABCDE1234F"
+              className={inputClass(fieldErrors.panNumber)}
+            />
+          </Field>
+
+          <Field
+            label="Aadhaar Card Number"
+            error={fieldErrors.aadhaarNumber}
+          >
+            <input
+              type="text"
+              inputMode="numeric"
+              name="aadhaarNumber"
+              maxLength="12"
+              autoComplete="off"
+              value={form.aadhaarNumber}
+              onChange={handleChange}
+              placeholder="12-digit Aadhaar number"
+              className={inputClass(fieldErrors.aadhaarNumber)}
+            />
+          </Field>
+
+          <div className="md:col-span-2">
+            <Field
+              label="Additional Documents (Optional)"
+              error={fieldErrors.documents}
+            >
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                onChange={handleDocumentsChange}
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:font-semibold file:text-orange-700"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Up to 5 PDF/JPG/PNG files, 1 KB to 100 KB each. Identity data and documents are available only to Admin users after creation.
+              </span>
+              {documents.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {documents.map((file) => (
+                    <span
+                      key={`${file.name}-${file.size}`}
+                      className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+                    >
+                      {file.name} · {formatBytes(file.size)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Field>
+          </div>
 
           <Field
             label="Password"
@@ -410,7 +544,7 @@ export default function CreateId() {
         <div className="mt-6 flex justify-end">
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || vendorsLoading}
             className="rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? 'Creating ID...' : 'Create ID'}

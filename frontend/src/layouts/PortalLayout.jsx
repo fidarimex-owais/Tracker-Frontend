@@ -21,6 +21,7 @@ const links = {
     { to: '/admin/profile', label: 'Profile' },
     { to: '/admin/create-id', label: 'Create ID' },
     { to: '/admin/users', label: 'User' },
+    { to: '/admin/identity-documents', label: 'Identity & Documents' },
     {
       to: '/admin/signup-requests',
       label: 'Signup Request',

@@ -7,10 +7,12 @@ import {
   SIGNUP_REQUESTS_CHANGED_EVENT,
   approveSignupRequest,
   getSignupRequests,
+  getVendorOptions,
   rejectSignupRequest,
 } from '../../services/adminService';
 
 const ROLE_LABELS = {
+  subadmin: 'Sub-Admin',
   vendor: 'Vendor',
   supervisor: 'Supervisor',
 };
@@ -22,15 +24,21 @@ const portalLabel = (role) =>
 
 const descriptionForUser = (user) => {
   if (user.role === 'vendor') {
-    return `Only Supervisor requests for ${user.brandName || 'your assigned brand'} are shown here.`;
+    return 'Only Supervisor requests assigned to your Vendor account are shown here.';
   }
 
-  return 'Vendor and Supervisor signup requests across all brands are shown here.';
+  if (user.role === 'admin') {
+    return 'Sub-Admin, Vendor, and Supervisor signup requests are shown here. Supervisor requests include their selected Vendor.';
+  }
+
+  return 'Vendor and Supervisor signup requests are shown here. Supervisor requests include their selected Vendor.';
 };
 
 export default function SignupRequests() {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [vendorSelections, setVendorSelections] = useState({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
@@ -57,10 +65,24 @@ export default function SignupRequests() {
   useEffect(() => {
     let active = true;
 
-    getSignupRequests(user.role)
-      .then((result) => {
+    const requestsPromise = getSignupRequests(user.role);
+    const vendorsPromise = ['admin', 'subadmin'].includes(user.role)
+      ? getVendorOptions()
+      : Promise.resolve({ vendors: [] });
+
+    Promise.all([requestsPromise, vendorsPromise])
+      .then(([requestResult, vendorResult]) => {
         if (active) {
-          setRequests(result.requests || []);
+          const nextRequests = requestResult.requests || [];
+          setRequests(nextRequests);
+          setVendors(vendorResult.vendors || []);
+          setVendorSelections(
+            Object.fromEntries(
+              nextRequests
+                .filter((request) => request.role === 'supervisor')
+                .map((request) => [request.id, request.vendorId || ''])
+            )
+          );
         }
       })
       .catch((requestError) => {
@@ -95,9 +117,23 @@ export default function SignupRequests() {
     setSuccess('');
 
     try {
-      await approveSignupRequest(
+      const vendorId =
+        request.role === 'supervisor'
+          ? user.role === 'vendor'
+            ? user.id
+            : vendorSelections[request.id] || request.vendorId || ''
+          : '';
+
+      if (request.role === 'supervisor' && !vendorId) {
+        setError('Select a Vendor before approving this Supervisor request.');
+        setBusyId('');
+        return;
+      }
+
+      const result = await approveSignupRequest(
         request.id,
-        user.role
+        user.role,
+        vendorId
       );
 
       setRequests((current) =>
@@ -105,7 +141,7 @@ export default function SignupRequests() {
       );
 
       setSuccess(
-        `${request.userName} was approved as ${ROLE_LABELS[request.role]} for ${request.brandName}.`
+        `${request.userName} was approved as ${ROLE_LABELS[request.role]}${request.role === 'supervisor' ? ` for ${result.user?.vendorName || request.vendorName || 'the selected Vendor'}` : ''}.`
       );
 
       notifyCountChanged();
@@ -139,7 +175,7 @@ export default function SignupRequests() {
       );
 
       setSuccess(
-        `${request.userName}'s ${ROLE_LABELS[request.role]} signup request for ${request.brandName} was rejected.`
+        `${request.userName}'s ${ROLE_LABELS[request.role]} signup request was rejected.`
       );
 
       notifyCountChanged();
@@ -201,7 +237,7 @@ export default function SignupRequests() {
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
               <th className="px-4 py-3 font-semibold">Name</th>
-              <th className="px-4 py-3 font-semibold">Brand</th>
+              <th className="px-4 py-3 font-semibold">Vendor</th>
               <th className="px-4 py-3 font-semibold">Role</th>
               <th className="px-4 py-3 font-semibold">Email</th>
               <th className="px-4 py-3 font-semibold">Action</th>
@@ -224,7 +260,7 @@ export default function SignupRequests() {
                   colSpan="5"
                   className="px-4 py-8 text-center text-slate-500"
                 >
-                  No pending signup requests for your role and brand access.
+                  No pending signup requests for your role and Vendor access.
                 </td>
               </tr>
             ) : (
@@ -238,7 +274,30 @@ export default function SignupRequests() {
                     </td>
 
                     <td className="px-4 py-3 font-semibold text-slate-700">
-                      {request.brandName || '—'}
+                      {request.role === 'supervisor' && ['admin', 'subadmin'].includes(user.role) ? (
+                        <select
+                          value={vendorSelections[request.id] || ''}
+                          onChange={(event) =>
+                            setVendorSelections((current) => ({
+                              ...current,
+                              [request.id]: event.target.value,
+                            }))
+                          }
+                          disabled={busy}
+                          className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                        >
+                          <option value="">Select Vendor</option>
+                          {vendors.map((vendor) => (
+                            <option key={vendor.id} value={vendor.id}>
+                              {vendor.userName}
+                            </option>
+                          ))}
+                        </select>
+                      ) : request.role === 'supervisor' ? (
+                        request.vendorName || 'Assigned to you'
+                      ) : (
+                        'Not applicable'
+                      )}
                     </td>
 
                     <td className="px-4 py-3 text-slate-600">

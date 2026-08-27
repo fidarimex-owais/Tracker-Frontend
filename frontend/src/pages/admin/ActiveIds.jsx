@@ -126,7 +126,7 @@ export default function ActiveIds() {
               </th>
 
               <th className="px-4 py-3 font-semibold">
-                Company
+                Vendor
               </th>
 
               <th className="px-4 py-3 font-semibold">
@@ -177,8 +177,9 @@ export default function ActiveIds() {
                     </td>
 
                     <td className="px-4 py-3 text-slate-600">
-                      {user.companyName ||
-                        '—'}
+                      {user.role === 'supervisor'
+                        ? user.vendorName || 'Unassigned'
+                        : 'Not applicable'}
                     </td>
 
                     <td className="px-4 py-3 text-slate-600">

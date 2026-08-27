@@ -40,6 +40,17 @@ router.get(
   asyncHandler(controller.listActiveIds)
 );
 
+// Sensitive identity information is exposed only on the Admin router.
+router.get(
+  '/identity-documents',
+  asyncHandler(controller.listIdentityDocuments)
+);
+
+router.get(
+  '/identity-documents/:source/:id/documents/:documentId/open',
+  asyncHandler(controller.openIdentityDocument)
+);
+
 // Signup request review routes
 
 router.get(
@@ -73,8 +84,8 @@ router.patch(
 );
 
 router.patch(
-  '/users/:id/brand',
-  asyncHandler(controller.updateBrand)
+  '/users/:id/vendor',
+  asyncHandler(controller.updateVendor)
 );
 
 router.patch(

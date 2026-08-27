@@ -70,8 +70,8 @@ router.patch(
 );
 
 router.patch(
-  '/users/:id/brand',
-  asyncHandler(adminController.updateBrand)
+  '/users/:id/vendor',
+  asyncHandler(adminController.updateVendor)
 );
 
 router.patch(

@@ -10,7 +10,7 @@ const EMPTY = {
   profile: {
     userName: '',
     email: '',
-    brandName: '',
+    vendorName: '',
     isActive: true,
     role: 'supervisor',
   },
@@ -98,8 +98,8 @@ export default function SupervisorDashboard() {
 
       <div className="grid grid-cols-2 gap-2 min-[390px]:gap-3 sm:grid-cols-3 sm:gap-4">
         <SummaryCard
-          label="Assigned Brand"
-          value={profile.brandName || 'Not Assigned'}
+          label="Assigned Vendor"
+          value={profile.vendorName || 'Not Assigned'}
           loading={loading}
           textValue
           className="col-span-2 sm:col-span-1"
@@ -136,8 +136,8 @@ export default function SupervisorDashboard() {
               loading={loading}
             />
             <InfoRow
-              label="Brand"
-              value={profile.brandName || 'Not Assigned'}
+              label="Vendor"
+              value={profile.vendorName || 'Not Assigned'}
               loading={loading}
             />
             <InfoRow

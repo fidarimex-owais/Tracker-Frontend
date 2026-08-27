@@ -1,6 +1,6 @@
 // frontend/src/pages/auth/Signup.jsx
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Link,
   Navigate,
@@ -8,6 +8,16 @@ import {
 } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
+import { getVendorOptions } from '../../services/adminService';
+import {
+  filesToIdentityPayload,
+  formatBytes,
+  isValidAadhaar,
+  isValidPan,
+  normalizeAadhaar,
+  normalizePan,
+  validateIdentityFiles,
+} from '../../utils/identityRegistration';
 import {
   Alert,
   AuthField,
@@ -18,22 +28,19 @@ import {
 
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Joker',
-  'Banana Man',
-];
-
 const SIGNUP_ROLE_OPTIONS = [
+  { value: 'subadmin', label: 'Sub-Admin' },
   { value: 'vendor', label: 'Vendor' },
   { value: 'supervisor', label: 'Supervisor' },
 ];
 
 const INITIAL_FORM = {
-  brandName: '',
+  vendorId: '',
   userName: '',
   mobileNumber: '',
   email: '',
+  panNumber: '',
+  aadhaarNumber: '',
   password: '',
   confirmPassword: '',
 };
@@ -54,13 +61,50 @@ export default function Signup() {
 
   const [selectedRole, setSelectedRole] = useState(validInitialRole);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [documents, setDocuments] = useState([]);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (selectedRole !== 'supervisor') {
+      return;
+    }
+
+    let active = true;
+    setVendorsLoading(true);
+
+    getVendorOptions()
+      .then((result) => {
+        if (active) {
+          setVendors(result.vendors || []);
+        }
+      })
+      .catch((requestError) => {
+        if (active) {
+          setError(
+            requestError.response?.data?.message ||
+              requestError.message ||
+              'Unable to load Vendors'
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setVendorsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedRole]);
 
   if (user) {
     return (
@@ -83,6 +127,7 @@ export default function Signup() {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setTermsAccepted(false);
+    setDocuments([]);
     setFieldErrors({});
     setError('');
     setSuccess('');
@@ -96,10 +141,16 @@ export default function Signup() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    const nextValue =
+      name === 'panNumber'
+        ? normalizePan(value)
+        : name === 'aadhaarNumber'
+          ? normalizeAadhaar(value)
+          : value;
 
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: nextValue,
     }));
 
     setFieldErrors((current) => ({
@@ -111,6 +162,28 @@ export default function Signup() {
     setSuccess('');
   };
 
+  const handleDocumentsChange = (event) => {
+    const nextDocuments = Array.from(event.target.files || []);
+    const documentError = validateIdentityFiles(nextDocuments);
+
+    if (documentError) {
+      setDocuments([]);
+      setFieldErrors((current) => ({
+        ...current,
+        documents: documentError,
+      }));
+      event.target.value = '';
+      return;
+    }
+
+    setDocuments(nextDocuments);
+    setFieldErrors((current) => ({
+      ...current,
+      documents: '',
+    }));
+    setError('');
+  };
+
   const submit = async (event) => {
     event.preventDefault();
 
@@ -118,11 +191,28 @@ export default function Signup() {
     const errors = {};
 
     if (!selectedRole) {
-      errors.role = 'Select Vendor or Supervisor before registering';
+      errors.role = 'Select Sub-Admin, Vendor, or Supervisor before registering';
+    }
+
+    if (selectedRole === 'supervisor' && !form.vendorId) {
+      errors.vendorId = 'Select a Vendor';
     }
 
     if (!isValidGmail(email)) {
       errors.email = 'Please enter a valid Gmail address.';
+    }
+
+    if (!isValidPan(form.panNumber)) {
+      errors.panNumber = 'Enter a valid PAN number (for example ABCDE1234F)';
+    }
+
+    if (!isValidAadhaar(form.aadhaarNumber)) {
+      errors.aadhaarNumber = 'Enter a valid 12-digit Aadhaar number';
+    }
+
+    const documentError = validateIdentityFiles(documents);
+    if (documentError) {
+      errors.documents = documentError;
     }
 
     if (form.password.length < 8) {
@@ -149,8 +239,12 @@ export default function Signup() {
     setBusy(true);
 
     try {
+      const documentPayload = await filesToIdentityPayload(documents);
       const result = await signup({
         ...form,
+        panNumber: normalizePan(form.panNumber),
+        aadhaarNumber: normalizeAadhaar(form.aadhaarNumber),
+        documents: documentPayload,
         email,
         role: selectedRole,
         termsAccepted,
@@ -165,6 +259,7 @@ export default function Signup() {
       setShowPassword(false);
       setShowConfirmPassword(false);
       setTermsAccepted(false);
+      setDocuments([]);
     } catch (requestError) {
       const nextErrors = {};
 
@@ -248,31 +343,38 @@ export default function Signup() {
               </div>
             )}
 
-            <AuthField
-              label="Brand"
-              error={fieldErrors.brandName}
-            >
-              <div className="relative">
-                <FieldIcon type="brand" />
-                <select
-                  required
-                  name="brandName"
-                  value={form.brandName}
-                  onChange={handleChange}
-                  className={inputClass(fieldErrors.brandName)}
-                >
-                  <option value="">Select Brand</option>
-                  {BRAND_OPTIONS.map((brand) => (
-                    <option
-                      key={brand}
-                      value={brand}
-                    >
-                      {brand}
+            {selectedRole === 'supervisor' && (
+              <AuthField
+                label="Vendor"
+                error={fieldErrors.vendorId}
+              >
+                <div className="relative">
+                  <FieldIcon type="vendor" />
+                  <select
+                    required
+                    name="vendorId"
+                    value={form.vendorId}
+                    onChange={handleChange}
+                    disabled={vendorsLoading}
+                    className={inputClass(fieldErrors.vendorId)}
+                  >
+                    <option value="">
+                      {vendorsLoading
+                        ? 'Loading Vendors...'
+                        : 'Select Vendor'}
                     </option>
-                  ))}
-                </select>
-              </div>
-            </AuthField>
+                    {vendors.map((vendor) => (
+                      <option
+                        key={vendor.id}
+                        value={vendor.id}
+                      >
+                        {vendor.userName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </AuthField>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <AuthField
@@ -332,6 +434,59 @@ export default function Signup() {
                   className={inputClass(fieldErrors.email)}
                 />
               </div>
+            </AuthField>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AuthField label="PAN Card Number" error={fieldErrors.panNumber}>
+                <input
+                  required
+                  type="text"
+                  name="panNumber"
+                  maxLength="10"
+                  autoComplete="off"
+                  value={form.panNumber}
+                  onChange={handleChange}
+                  placeholder="ABCDE1234F"
+                  className={inputClass(fieldErrors.panNumber, true)}
+                />
+              </AuthField>
+
+              <AuthField label="Aadhaar Card Number" error={fieldErrors.aadhaarNumber}>
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  name="aadhaarNumber"
+                  maxLength="12"
+                  autoComplete="off"
+                  value={form.aadhaarNumber}
+                  onChange={handleChange}
+                  placeholder="12-digit Aadhaar number"
+                  className={inputClass(fieldErrors.aadhaarNumber, true)}
+                />
+              </AuthField>
+            </div>
+
+            <AuthField label="Additional Documents (Optional)" error={fieldErrors.documents}>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                onChange={handleDocumentsChange}
+                className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:font-bold file:text-orange-700 sm:text-sm"
+              />
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                Up to 5 PDF/JPG/PNG files. Each file must be 1 KB to 100 KB. PAN, Aadhaar, and documents are visible only to Admin users after submission.
+              </p>
+              {documents.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {documents.map((file) => (
+                    <span key={`${file.name}-${file.size}`} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                      {file.name} · {formatBytes(file.size)}
+                    </span>
+                  ))}
+                </div>
+              )}
             </AuthField>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -453,7 +608,7 @@ function FieldIcon({ type }) {
           <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
         </svg>
       )}
-      {type === 'brand' && (
+      {type === 'vendor' && (
         <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M4 21V5l8-3 8 3v16" />
           <path d="M8 8h2M8 12h2M14 8h2M14 12h2M10 21v-5h4v5" />

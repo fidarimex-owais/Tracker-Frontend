@@ -31,8 +31,18 @@ const signup = async (req, res) => {
   res.status(202).json({
     success: true,
     message:
-      'Signup request submitted. You can sign in after Admin approval.',
+      'Signup request submitted. You can sign in after the request is approved.',
     request,
+  });
+};
+
+
+const listVendors = async (req, res) => {
+  const vendors = await authService.listVendorOptions();
+
+  res.json({
+    success: true,
+    vendors,
   });
 };
 
@@ -125,6 +135,7 @@ const updateProfile = async (req, res) => {
 
 module.exports = {
   signup,
+  listVendors,
   login,
   googleLogin,
   logout,

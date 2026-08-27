@@ -1,22 +1,22 @@
 // Admin service dependencies and related data models
 
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const {
-  BRAND_OPTIONS,
-  BRAND_ROLES,
   ALL_ROLES,
-  getEffectiveBrand,
   getUserModel,
   findUserByEmail,
   findUserById,
+  findActiveVendorById,
+  listActiveVendors,
   listUsersByRoles,
   listActivePortalUsers,
 } = require('../auth/auth.model');
 
 const {
   getSignupRequestModel,
-  getRequestBrand,
+  getRequestVendorId,
   buildReviewFilterForActor,
   canActorReviewRequest,
   findPendingSignupRequestByEmail,
@@ -29,6 +29,13 @@ const {
 const {
   sanitizeUser,
 } = require('../auth/auth.service');
+
+const {
+  createIdentityRecord,
+  revealIdentityForAdmin,
+  buildPrivateDocumentUrl,
+  cleanupDocuments,
+} = require('../identity/identity.service');
 
 const {
   getModelForBrand,
@@ -72,7 +79,9 @@ const DELETABLE_ROLES_BY_ACTOR = {
 const sanitizePortalUser = (user) => ({
   id: user._id.toString(),
   userName: user.userName || '',
-  brandName: getEffectiveBrand(user),
+  brandName: '',
+  vendorId: user.vendorId ? user.vendorId.toString() : '',
+  vendorName: user.vendorName || '',
   mobileNumber: user.mobileNumber || '',
   email: user.email,
   role: user.role,
@@ -83,7 +92,9 @@ const sanitizePortalUser = (user) => ({
 
 const sanitizeSignupRequest = (request) => ({
   id: request._id.toString(),
-  brandName: getRequestBrand(request),
+  brandName: '',
+  vendorId: getRequestVendorId(request),
+  vendorName: request.vendorName || '',
   userName: request.userName,
   mobileNumber: request.mobileNumber,
   email: request.email,
@@ -95,67 +106,59 @@ const sanitizeSignupRequest = (request) => ({
 const getCreatableRoles = (actorRole) =>
   CREATABLE_ROLES_BY_ACTOR[actorRole] || [];
 
-const getActorBrand = (actor) =>
-  getEffectiveBrand(actor);
-
-const requireActorBrand = (actor) => {
-  const brandName = getActorBrand(actor);
-
-  if (!BRAND_OPTIONS.includes(brandName)) {
-    throw createHttpError(
-      403,
-      'Your Vendor account does not have a valid brand assignment'
-    );
-  }
-
-  return brandName;
-};
-
-const resolveCreatedUserBrand = (
-  requestedBrand,
+const resolveCreatedUserVendor = async (
+  requestedVendorId,
   targetRole,
   actor
 ) => {
-  if (!BRAND_ROLES.includes(targetRole)) {
-    return '';
+  if (targetRole !== 'supervisor') {
+    return null;
   }
 
   if (actor.role === 'vendor') {
-    const actorBrand = requireActorBrand(actor);
-
-    if (
-      requestedBrand &&
-      requestedBrand !== actorBrand
-    ) {
-      throw createHttpError(
-        403,
-        `Vendors can create Supervisors only for their assigned brand: ${actorBrand}`
-      );
-    }
-
-    return actorBrand;
+    return {
+      _id: actor.id,
+      userName: actor.userName || 'Vendor',
+    };
   }
 
-  if (!BRAND_OPTIONS.includes(requestedBrand)) {
+  const vendor = await findActiveVendorById(
+    requestedVendorId
+  );
+
+  if (!vendor) {
     throw createHttpError(
       400,
-      'Select a valid brand for Vendor or Supervisor accounts'
+      'Select an active Vendor for the Supervisor'
     );
   }
 
-  return requestedBrand;
+  return vendor;
+};
+
+const listVendorOptions = async () => {
+  const vendors = await listActiveVendors();
+
+  return vendors.map((vendor) => ({
+    id: vendor._id.toString(),
+    userName: vendor.userName || 'Unnamed Vendor',
+    email: vendor.email,
+  }));
 };
 
 // Create portal users according to the current actor's permissions
 
 const createUser = async (
   {
-    brandName,
+    vendorId,
     userName,
     mobileNumber,
     email,
     role,
     password,
+    panNumber,
+    aadhaarNumber,
+    documents,
   },
   actor
 ) => {
@@ -168,15 +171,24 @@ const createUser = async (
     );
   }
 
-  const assignedBrand = resolveCreatedUserBrand(
-    brandName,
+  const vendorPromise = resolveCreatedUserVendor(
+    vendorId,
     role,
     actor
   );
 
-  const [existing, existingSignupRequest] = await Promise.all([
+  // These operations are independent, so running them together shortens the
+  // create-ID path without reducing bcrypt rounds or validation checks.
+  const [
+    assignedVendor,
+    existing,
+    existingSignupRequest,
+    passwordHash,
+  ] = await Promise.all([
+    vendorPromise,
     findUserByEmail(email),
     findSignupRequestByEmail(email),
+    bcrypt.hash(password, SALT_ROUNDS),
   ]);
 
   if (existing || existingSignupRequest) {
@@ -186,26 +198,33 @@ const createUser = async (
     );
   }
 
-  const User = getUserModel();
-  const passwordHash = await bcrypt.hash(
-    password,
-    SALT_ROUNDS
-  );
+  const identity = await createIdentityRecord({
+    panNumber,
+    aadhaarNumber,
+    documents,
+    folderKey: `created-${email}`,
+  });
 
+  const User = getUserModel();
   let user;
 
   try {
     user = await User.create({
-      brandName: assignedBrand,
+      brandName: '',
+      companyName: '',
+      vendorId: assignedVendor?._id || null,
+      vendorName: assignedVendor?.userName || '',
       userName,
       mobileNumber,
       email,
       role,
       passwordHash,
+      identity,
       isActive: true,
       createdByAdmin: actor.role === 'admin',
     });
   } catch (error) {
+    await cleanupDocuments(identity.documents);
     if (error?.code === 11000) {
       throw createHttpError(
         409,
@@ -243,7 +262,8 @@ const getSignupRequestCount = async (actor) => {
 
 const approveSignupRequest = async (
   requestId,
-  actor
+  actor,
+  requestedVendorId = ''
 ) => {
   const reviewFilter = buildReviewFilterForActor(actor);
 
@@ -270,23 +290,12 @@ const approveSignupRequest = async (
     {
       new: true,
     }
-  ).select('+passwordHash');
+  ).select('+passwordHash +identity');
 
   if (!claimedRequest) {
     await throwRequestDecisionError(
       requestId,
       actor
-    );
-  }
-
-  const requestBrand = getRequestBrand(claimedRequest);
-
-  if (!BRAND_OPTIONS.includes(requestBrand)) {
-    await restorePendingRequest(claimedRequest._id);
-
-    throw createHttpError(
-      409,
-      'This signup request does not have a valid brand assignment'
     );
   }
 
@@ -297,6 +306,40 @@ const approveSignupRequest = async (
       409,
       'This signup request no longer has usable credentials'
     );
+  }
+
+  let assignedVendor = null;
+
+  if (claimedRequest.role === 'supervisor') {
+    const candidateVendorId =
+      actor.role === 'vendor'
+        ? actor.id
+        : requestedVendorId || getRequestVendorId(claimedRequest);
+
+    assignedVendor = await findActiveVendorById(
+      candidateVendorId
+    );
+
+    if (!assignedVendor) {
+      await restorePendingRequest(claimedRequest._id);
+
+      throw createHttpError(
+        400,
+        'Select an active Vendor before approving this Supervisor request'
+      );
+    }
+
+    if (
+      actor.role === 'vendor' &&
+      assignedVendor._id.toString() !== actor.id
+    ) {
+      await restorePendingRequest(claimedRequest._id);
+
+      throw createHttpError(
+        403,
+        'Vendors can approve only Supervisor requests assigned to them'
+      );
+    }
   }
 
   const existingUser = await findUserByEmail(
@@ -317,12 +360,19 @@ const approveSignupRequest = async (
 
   try {
     user = await User.create({
-      brandName: requestBrand,
+      brandName: '',
+      companyName: '',
+      vendorId: assignedVendor?._id || null,
+      vendorName: assignedVendor?.userName || '',
       userName: claimedRequest.userName,
       mobileNumber: claimedRequest.mobileNumber,
       email: claimedRequest.email,
       role: claimedRequest.role,
       passwordHash: claimedRequest.passwordHash,
+      identity:
+        claimedRequest.identity?.toObject?.() ||
+        claimedRequest.identity ||
+        undefined,
       isActive: true,
       createdByAdmin: actor.role === 'admin',
     });
@@ -332,10 +382,6 @@ const approveSignupRequest = async (
   }
 
   const decidedAt = new Date();
-  const actorBrand =
-    actor.role === 'vendor'
-      ? requireActorBrand(actor)
-      : '';
 
   const finalizedRequest = await SignupRequest.findOneAndUpdate(
     {
@@ -345,9 +391,13 @@ const approveSignupRequest = async (
     {
       $set: {
         status: 'approved',
+        vendorId: assignedVendor?._id || null,
+        vendorName: assignedVendor?.userName || '',
+        brandName: '',
+        companyName: '',
         reviewedBy: actor.id,
         reviewedByRole: actor.role,
-        reviewedByBrand: actorBrand,
+        reviewedByBrand: '',
         reviewedAt: decidedAt,
         createdUserId: user._id,
       },
@@ -356,12 +406,13 @@ const approveSignupRequest = async (
           decision: 'approved',
           decidedBy: actor.id,
           decidedByRole: actor.role,
-          decidedByBrand: actorBrand,
+          decidedByBrand: '',
           decidedAt,
         },
       },
       $unset: {
         passwordHash: 1,
+        identity: 1,
       },
     },
     {
@@ -398,11 +449,6 @@ const rejectSignupRequest = async (
 
   const SignupRequest = getSignupRequestModel();
   const decidedAt = new Date();
-  const actorBrand =
-    actor.role === 'vendor'
-      ? requireActorBrand(actor)
-      : '';
-
   const rejectedRequest = await SignupRequest.findOneAndUpdate(
     {
       _id: requestId,
@@ -414,7 +460,7 @@ const rejectSignupRequest = async (
         status: 'rejected',
         reviewedBy: actor.id,
         reviewedByRole: actor.role,
-        reviewedByBrand: actorBrand,
+        reviewedByBrand: '',
         reviewedAt: decidedAt,
       },
       $push: {
@@ -422,7 +468,7 @@ const rejectSignupRequest = async (
           decision: 'rejected',
           decidedBy: actor.id,
           decidedByRole: actor.role,
-          decidedByBrand: actorBrand,
+          decidedByBrand: '',
           decidedAt,
         },
       },
@@ -433,7 +479,7 @@ const rejectSignupRequest = async (
     {
       new: true,
     }
-  );
+  ).select('+identity');
 
   if (!rejectedRequest) {
     await throwRequestDecisionError(
@@ -442,6 +488,15 @@ const rejectSignupRequest = async (
     );
   }
 
+  await cleanupDocuments(
+    rejectedRequest.identity?.documents || []
+  );
+
+  await SignupRequest.updateOne(
+    { _id: rejectedRequest._id },
+    { $unset: { identity: 1 } }
+  );
+
   return sanitizeSignupRequest(rejectedRequest);
 };
 
@@ -449,7 +504,7 @@ const rejectSignupRequest = async (
 
 const listUsers = async (actor) => {
   let roles;
-  let brandName = '';
+  let vendorId = '';
 
   if (actor.role === 'admin') {
     roles = ALL_ROLES;
@@ -457,7 +512,7 @@ const listUsers = async (actor) => {
     roles = SUBADMIN_MANAGEABLE_ROLES;
   } else if (actor.role === 'vendor') {
     roles = VENDOR_MANAGEABLE_ROLES;
-    brandName = requireActorBrand(actor);
+    vendorId = actor.id;
   } else {
     throw createHttpError(
       403,
@@ -468,11 +523,11 @@ const listUsers = async (actor) => {
   const users = await listUsersByRoles(
     roles,
     {
-      brandName,
+      vendorId,
     }
   );
 
-  return users.map(sanitizeUser);
+  return users.map(sanitizePortalUser);
 };
 
 const updateRole = async (
@@ -498,15 +553,14 @@ const updateRole = async (
 
   ensureActorCanManageTarget(actor, target);
 
-  if (actor.role === 'subadmin') {
-    if (
-      !SUBADMIN_MANAGEABLE_ROLES.includes(role)
-    ) {
-      throw createHttpError(
-        403,
-        'Sub-Admins can assign only Vendor or Supervisor roles'
-      );
-    }
+  if (
+    actor.role === 'subadmin' &&
+    !SUBADMIN_MANAGEABLE_ROLES.includes(role)
+  ) {
+    throw createHttpError(
+      403,
+      'Sub-Admins can assign only Vendor or Supervisor roles'
+    );
   }
 
   if (actor.role === 'vendor') {
@@ -527,47 +581,36 @@ const updateRole = async (
     );
   }
 
-  if (
-    BRAND_ROLES.includes(role) &&
-    !BRAND_OPTIONS.includes(getEffectiveBrand(target))
-  ) {
-    throw createHttpError(
-      400,
-      'Assign a valid brand before changing this user to Vendor or Supervisor'
-    );
-  }
-
   target.role = role;
+  target.brandName = '';
+  target.companyName = '';
 
-  if (!BRAND_ROLES.includes(role)) {
-    target.brandName = '';
+  if (role !== 'supervisor') {
+    target.vendorId = null;
+    target.vendorName = '';
   }
 
   await target.save();
 
-  return sanitizeUser(target);
+  return sanitizePortalUser(target);
 };
 
-const updateBrand = async (
+const updateVendor = async (
   userId,
-  brandName,
+  vendorId,
   actor
 ) => {
-  if (!BRAND_OPTIONS.includes(brandName)) {
-    throw createHttpError(
-      400,
-      'Select Hi Banana, Joker, or Banana Man'
-    );
-  }
-
   if (!['admin', 'subadmin'].includes(actor.role)) {
     throw createHttpError(
       403,
-      'Only Admin or Sub-Admin can change a user brand'
+      'Only Admin or Sub-Admin can change a Supervisor Vendor'
     );
   }
 
-  const target = await findUserById(userId);
+  const [target, vendor] = await Promise.all([
+    findUserById(userId),
+    findActiveVendorById(vendorId),
+  ]);
 
   if (!target) {
     throw createHttpError(
@@ -576,20 +619,29 @@ const updateBrand = async (
     );
   }
 
-  ensureActorCanManageTarget(actor, target);
-
-  if (!BRAND_ROLES.includes(target.role)) {
+  if (!vendor) {
     throw createHttpError(
       400,
-      'Only Vendor and Supervisor accounts can be assigned to a brand'
+      'Select an active Vendor'
     );
   }
 
-  target.brandName = brandName;
+  ensureActorCanManageTarget(actor, target);
+
+  if (target.role !== 'supervisor') {
+    throw createHttpError(
+      400,
+      'Only Supervisor accounts can be assigned to a Vendor'
+    );
+  }
+
+  target.vendorId = vendor._id;
+  target.vendorName = vendor.userName || 'Vendor';
+  target.brandName = '';
   target.companyName = '';
   await target.save();
 
-  return sanitizeUser(target);
+  return sanitizePortalUser(target);
 };
 
 const updateStatus = async (
@@ -638,7 +690,9 @@ const deleteUser = async (
   userId,
   actor
 ) => {
-  const target = await findUserById(userId);
+  const target = await findUserById(userId, {
+    includeIdentity: true,
+  });
 
   if (!target) {
     throw createHttpError(
@@ -664,20 +718,21 @@ const deleteUser = async (
     );
   }
 
-  if (actor.role === 'vendor') {
-    const actorBrand = requireActorBrand(actor);
-    const targetBrand = getEffectiveBrand(target);
-
-    if (targetBrand !== actorBrand) {
-      throw createHttpError(
-        403,
-        `Vendors can delete only Supervisors assigned to ${actorBrand}`
-      );
-    }
+  if (
+    actor.role === 'vendor' &&
+    target.vendorId?.toString() !== actor.id
+  ) {
+    throw createHttpError(
+      403,
+      'Vendors can delete only Supervisors assigned to them'
+    );
   }
 
   const deletedUser = sanitizeUser(target);
+  const documents = target.identity?.documents || [];
+
   await target.deleteOne();
+  await cleanupDocuments(documents);
 
   return deletedUser;
 };
@@ -716,13 +771,10 @@ const ensureActorCanManageTarget = (actor, target) => {
       );
     }
 
-    const actorBrand = requireActorBrand(actor);
-    const targetBrand = getEffectiveBrand(target);
-
-    if (targetBrand !== actorBrand) {
+    if (target.vendorId?.toString() !== actor.id) {
       throw createHttpError(
         403,
-        `Vendors can manage only Supervisors assigned to ${actorBrand}`
+        'Vendors can manage only Supervisors assigned to them'
       );
     }
 
@@ -784,11 +836,9 @@ const throwRequestDecisionError = async (
 
   if (!canActorReviewRequest(actor, request)) {
     if (actor.role === 'vendor') {
-      const actorBrand = getActorBrand(actor);
-
       throw createHttpError(
         403,
-        `Vendors can review only Supervisor signup requests for their own brand${actorBrand ? ` (${actorBrand})` : ''}`
+        'Vendors can review only Supervisor signup requests assigned to them'
       );
     }
 
@@ -941,7 +991,9 @@ const getRecentSignupRequestsForActor = async (
   return requests.map((request) => ({
     id: request._id.toString(),
     userName: request.userName,
-    brandName: getRequestBrand(request),
+    brandName: '',
+    vendorId: getRequestVendorId(request),
+    vendorName: request.vendorName || '',
     role: request.role,
     email: request.email,
     status: request.status,
@@ -949,35 +1001,44 @@ const getRecentSignupRequestsForActor = async (
   }));
 };
 
-const buildBrandSummary = (users) => {
-  const summary = BRAND_OPTIONS.map((brandName) => ({
-    brandName,
-    vendors: 0,
+const buildVendorSummary = (users) => {
+  const vendors = users.filter(
+    (user) => user.role === 'vendor'
+  );
+
+  const summary = vendors.map((vendor) => ({
+    vendorId: vendor._id.toString(),
+    vendorName: vendor.userName || vendor.email,
     supervisors: 0,
-    totalUsers: 0,
   }));
 
   const index = new Map(
-    summary.map((item) => [item.brandName, item])
+    summary.map((item) => [item.vendorId, item])
   );
 
-  for (const user of users) {
-    const brandName = getEffectiveBrand(user);
-    const brand = index.get(brandName);
+  let unassignedSupervisors = 0;
 
-    if (!brand) {
+  for (const user of users) {
+    if (user.role !== 'supervisor') {
       continue;
     }
 
-    if (user.role === 'vendor') {
-      brand.vendors += 1;
-    }
+    const vendorId = user.vendorId?.toString() || '';
+    const vendor = index.get(vendorId);
 
-    if (user.role === 'supervisor') {
-      brand.supervisors += 1;
+    if (vendor) {
+      vendor.supervisors += 1;
+    } else {
+      unassignedSupervisors += 1;
     }
+  }
 
-    brand.totalUsers = brand.vendors + brand.supervisors;
+  if (unassignedSupervisors > 0) {
+    summary.push({
+      vendorId: 'unassigned',
+      vendorName: 'Unassigned',
+      supervisors: unassignedSupervisors,
+    });
   }
 
   return summary;
@@ -1027,7 +1088,7 @@ const getAdminDashboardOverview = async (actor) => {
       recoverySheets,
     },
     userSummary,
-    brandSummary: buildBrandSummary(activeUsers),
+    vendorSummary: buildVendorSummary(activeUsers),
     signupTrend,
     recentSignupRequests,
   };
@@ -1072,15 +1133,13 @@ const getSubAdminDashboardOverview = async (actor) => {
       recoverySheets,
     },
     userSummary,
-    brandSummary: buildBrandSummary(activeUsers),
+    vendorSummary: buildVendorSummary(activeUsers),
     signupTrend,
     recentSignupRequests,
   };
 };
 
 const getVendorDashboardOverview = async (actor) => {
-  const brandName = requireActorBrand(actor);
-
   const [
     supervisors,
     pendingSignupRequests,
@@ -1091,7 +1150,7 @@ const getVendorDashboardOverview = async (actor) => {
     listUsersByRoles(
       ['supervisor'],
       {
-        brandName,
+        vendorId: actor.id,
       }
     ),
     countPendingSignupRequestsForActor(actor),
@@ -1106,7 +1165,7 @@ const getVendorDashboardOverview = async (actor) => {
 
   return {
     role: 'vendor',
-    brandName,
+    vendorName: actor.userName || 'Vendor',
     summary: {
       totalSupervisors: supervisors.length,
       activeSupervisors: activeSupervisors.length,
@@ -1153,7 +1212,9 @@ const getSupervisorDashboardOverview = async (actor) => {
     profile: {
       userName: actor.userName || '',
       email: actor.email,
-      brandName: getEffectiveBrand(actor),
+      brandName: '',
+      vendorId: actor.vendorId ? actor.vendorId.toString() : '',
+      vendorName: actor.vendorName || '',
       isActive: actor.isActive,
       role: actor.role,
     },
@@ -1197,6 +1258,121 @@ const getDashboardOverview = async (actor) => {
   );
 };
 
+
+// Admin-only identity and document access
+
+const serializeIdentitySubmission = (
+  record,
+  source,
+  status
+) => {
+  const identity = revealIdentityForAdmin(record.identity);
+
+  if (!identity) {
+    return null;
+  }
+
+  return {
+    id: record._id.toString(),
+    source,
+    status,
+    userName: record.userName || '',
+    mobileNumber: record.mobileNumber || '',
+    email: record.email,
+    role: record.role,
+    vendorName: record.vendorName || '',
+    createdAt: record.createdAt,
+    ...identity,
+  };
+};
+
+const listIdentitySubmissions = async () => {
+  const User = getUserModel();
+  const SignupRequest = getSignupRequestModel();
+
+  const [users, pendingRequests] = await Promise.all([
+    User.find({
+      role: { $in: ['subadmin', 'vendor', 'supervisor'] },
+      identity: { $exists: true },
+    })
+      .select('+identity')
+      .sort({ createdAt: -1 })
+      .lean(),
+    SignupRequest.find({
+      role: { $in: ['subadmin', 'vendor', 'supervisor'] },
+      status: { $in: ['pending', 'processing'] },
+      identity: { $exists: true },
+    })
+      .select('+identity')
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+
+  return [
+    ...pendingRequests
+      .map((request) =>
+        serializeIdentitySubmission(
+          request,
+          'signup-request',
+          request.status
+        )
+      )
+      .filter(Boolean),
+    ...users
+      .map((user) =>
+        serializeIdentitySubmission(
+          user,
+          'user',
+          user.isActive ? 'active' : 'inactive'
+        )
+      )
+      .filter(Boolean),
+  ].sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() -
+      new Date(left.createdAt).getTime()
+  );
+};
+
+const getIdentityDocumentAccess = async (
+  source,
+  recordId,
+  documentId
+) => {
+  if (
+    !mongoose.isValidObjectId(recordId) ||
+    !mongoose.isValidObjectId(documentId)
+  ) {
+    throw createHttpError(400, 'Invalid document reference');
+  }
+
+  let record;
+
+  if (source === 'user') {
+    record = await getUserModel()
+      .findById(recordId)
+      .select('+identity');
+  } else if (source === 'signup-request') {
+    record = await getSignupRequestModel()
+      .findById(recordId)
+      .select('+identity');
+  } else {
+    throw createHttpError(400, 'Invalid identity record source');
+  }
+
+  if (!record?.identity) {
+    throw createHttpError(404, 'Identity record not found');
+  }
+
+  const document = record.identity.documents.id(documentId);
+
+  if (!document) {
+    throw createHttpError(404, 'Document not found');
+  }
+
+  return buildPrivateDocumentUrl(document);
+};
+
 // General service helpers
 
 const formatRole = (role) => {
@@ -1226,6 +1402,7 @@ module.exports = {
   CREATABLE_ROLES_BY_ACTOR,
   getCreatableRoles,
   getDashboardOverview,
+  listVendorOptions,
   createUser,
   listActiveIds,
   listSignupRequests,
@@ -1234,7 +1411,9 @@ module.exports = {
   rejectSignupRequest,
   listUsers,
   updateRole,
-  updateBrand,
+  updateVendor,
   updateStatus,
   deleteUser,
+  listIdentitySubmissions,
+  getIdentityDocumentAccess,
 };

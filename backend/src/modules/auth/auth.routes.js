@@ -30,6 +30,12 @@ router.post(
   asyncHandler(controller.signup)
 );
 
+// Lightweight Vendor list used by Supervisor registration/creation forms.
+router.get(
+  '/vendors',
+  asyncHandler(controller.listVendors)
+);
+
 // Email and password login endpoint
 
 router.post(

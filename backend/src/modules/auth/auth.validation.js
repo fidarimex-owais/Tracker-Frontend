@@ -2,12 +2,8 @@
 
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
-
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Joker',
-  'Banana Man',
-];
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+const { validateIdentityPayload } = require('../identity/identity.validation');
 
 const LOGIN_ROLE_OPTIONS = [
   'admin',
@@ -17,6 +13,7 @@ const LOGIN_ROLE_OPTIONS = [
 ];
 
 const PUBLIC_SIGNUP_ROLE_OPTIONS = [
+  'subadmin',
   'vendor',
   'supervisor',
 ];
@@ -149,12 +146,10 @@ const validateSignupRequest = (req, res, next) => {
       ? req.body.role.trim().toLowerCase()
       : '';
 
-  const brandName =
-    typeof req.body?.brandName === 'string'
-      ? req.body.brandName.trim()
-      : typeof req.body?.companyName === 'string'
-        ? req.body.companyName.trim()
-        : '';
+  const vendorId =
+    typeof req.body?.vendorId === 'string'
+      ? req.body.vendorId.trim()
+      : '';
 
   const userName =
     typeof req.body?.userName === 'string'
@@ -184,20 +179,20 @@ const validateSignupRequest = (req, res, next) => {
       : '';
 
   const termsAccepted = req.body?.termsAccepted === true;
-
-  const errors = [];
+  const identity = validateIdentityPayload(req.body);
+  const errors = [...identity.errors];
 
   if (!PUBLIC_SIGNUP_ROLE_OPTIONS.includes(role)) {
     errors.push({
       field: 'role',
-      message: 'Public signup is available only for Vendor or Supervisor',
+      message: 'Public signup is available for Sub-Admin, Vendor, or Supervisor',
     });
   }
 
-  if (!BRAND_OPTIONS.includes(brandName)) {
+  if (role === 'supervisor' && !OBJECT_ID_RE.test(vendorId)) {
     errors.push({
-      field: 'brandName',
-      message: 'Select Hi Banana, Joker, or Banana Man',
+      field: 'vendorId',
+      message: 'Select a Vendor',
     });
   }
 
@@ -254,18 +249,20 @@ const validateSignupRequest = (req, res, next) => {
 
   req.body = {
     role,
-    brandName,
+    vendorId: role === 'supervisor' ? vendorId : '',
     userName,
     mobileNumber,
     email,
     password,
     confirmPassword,
     termsAccepted,
+    panNumber: identity.panNumber,
+    aadhaarNumber: identity.aadhaarNumber,
+    documents: identity.documents,
   };
 
   return next();
 };
-
 
 // Validate updates to the currently authenticated user's profile
 
@@ -350,7 +347,6 @@ const validateProfileUpdate = (req, res, next) => {
 // Export authentication validation helpers
 
 module.exports = {
-  BRAND_OPTIONS,
   LOGIN_ROLE_OPTIONS,
   PUBLIC_SIGNUP_ROLE_OPTIONS,
   GOOGLE_LOGIN_ROLE_OPTIONS,

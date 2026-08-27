@@ -9,18 +9,13 @@ import {
 import {
   deleteUser,
   getUsers,
-  updateUserBrand,
+  getVendorOptions,
+  updateUserVendor,
   updateUserRole,
   updateUserStatus,
 } from '../../services/adminService';
 
 import { useAuth } from '../../auth/useAuth';
-
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Joker',
-  'Banana Man',
-];
 
 const ROLE_LABELS = {
   admin: 'Admin',
@@ -87,15 +82,15 @@ const portalLabel = (role) =>
 
 const descriptionForRole = (user) => {
   if (user.role === 'admin') {
-    return 'View users and manage brand assignments across the system.';
+    return 'View users and manage Supervisor-to-Vendor assignments across the system.';
   }
 
   if (user.role === 'subadmin') {
-    return 'View and manage Vendor and Supervisor accounts across all brands.';
+    return 'View and manage Vendor and Supervisor accounts and their assignments.';
   }
 
   if (user.role === 'vendor') {
-    return `View and manage Supervisor accounts assigned to ${user.brandName || 'your brand'}.`;
+    return 'View and manage Supervisor accounts assigned directly to your Vendor account.';
   }
 
   return 'View users.';
@@ -107,6 +102,7 @@ export default function UserManagement() {
   } = useAuth();
 
   const [users, setUsers] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [roleFilter, setRoleFilter] = useState('all');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -119,17 +115,23 @@ export default function UserManagement() {
     MANAGEABLE_ROLE_OPTIONS[currentUser.role] || [];
 
   const canChangeRoles = currentUser.role !== 'vendor';
-  const canChangeBrands = ['admin', 'subadmin'].includes(
+  const canChangeVendors = ['admin', 'subadmin'].includes(
     currentUser.role
   );
 
   useEffect(() => {
     let active = true;
 
-    getUsers(currentUser.role)
-      .then((result) => {
+    const usersPromise = getUsers(currentUser.role);
+    const vendorsPromise = canChangeVendors
+      ? getVendorOptions()
+      : Promise.resolve({ vendors: [] });
+
+    Promise.all([usersPromise, vendorsPromise])
+      .then(([userResult, vendorResult]) => {
         if (active) {
-          setUsers(result.users || []);
+          setUsers(userResult.users || []);
+          setVendors(vendorResult.vendors || []);
         }
       })
       .catch((e) => {
@@ -149,7 +151,7 @@ export default function UserManagement() {
     return () => {
       active = false;
     };
-  }, [currentUser.role]);
+  }, [currentUser.role, canChangeVendors]);
 
   const counts = useMemo(() => {
     const next = {
@@ -207,14 +209,14 @@ export default function UserManagement() {
     }
   };
 
-  const changeBrand = async (id, brandName) => {
+  const changeVendor = async (id, vendorId) => {
     setBusyId(id);
     setError('');
 
     try {
-      const result = await updateUserBrand(
+      const result = await updateUserVendor(
         id,
-        brandName,
+        vendorId,
         currentUser.role
       );
 
@@ -368,7 +370,7 @@ export default function UserManagement() {
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
                 <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Brand</th>
+                <th className="px-4 py-3">Vendor</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Status</th>
@@ -380,11 +382,6 @@ export default function UserManagement() {
 
             <tbody className="divide-y divide-slate-100">
               {visibleUsers.map((user) => {
-                const isBrandUser = [
-                  'vendor',
-                  'supervisor',
-                ].includes(user.role);
-
                 return (
                   <tr key={user.id}>
                     <td className="px-4 py-3 font-medium text-slate-800">
@@ -392,12 +389,12 @@ export default function UserManagement() {
                     </td>
 
                     <td className="px-4 py-3">
-                      {isBrandUser && canChangeBrands ? (
+                      {user.role === 'supervisor' && canChangeVendors ? (
                         <select
                           disabled={busyId === user.id}
-                          value={user.brandName || ''}
+                          value={user.vendorId || ''}
                           onChange={(event) =>
-                            changeBrand(
+                            changeVendor(
                               user.id,
                               event.target.value
                             )
@@ -405,25 +402,25 @@ export default function UserManagement() {
                           className="rounded-md border border-slate-300 bg-white px-2 py-1.5"
                         >
                           <option value="" disabled>
-                            Select brand
+                            Select Vendor
                           </option>
 
-                          {BRAND_OPTIONS.map((brand) => (
+                          {vendors.map((vendor) => (
                             <option
-                              key={brand}
-                              value={brand}
+                              key={vendor.id}
+                              value={vendor.id}
                             >
-                              {brand}
+                              {vendor.userName}
                             </option>
                           ))}
                         </select>
-                      ) : isBrandUser ? (
+                      ) : user.role === 'supervisor' ? (
                         <span className="font-medium text-slate-700">
-                          {user.brandName || 'Not assigned'}
+                          {user.vendorName || 'Unassigned'}
                         </span>
                       ) : (
                         <span className="text-slate-400">
-                          All brands
+                          Not applicable
                         </span>
                       )}
                     </td>
@@ -526,7 +523,7 @@ export default function UserManagement() {
                     colSpan="8"
                     className="px-4 py-10 text-center text-slate-400"
                   >
-                    No users found for this role and brand access.
+                    No users found for this role and Vendor access.
                   </td>
                 </tr>
               )}

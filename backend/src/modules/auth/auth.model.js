@@ -1,18 +1,18 @@
-// Authentication model dependencies and brand configuration
+// Authentication model dependencies and user relationship configuration
 
 const mongoose = require('mongoose');
 const { getUserDb } = require('../../config/db');
+const { identitySchema } = require('../identity/identity.schema');
 
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Joker',
-  'Banana Man',
-];
-
-const BRAND_ROLES = [
+const ALL_ROLES = [
+  'admin',
+  'subadmin',
   'vendor',
   'supervisor',
 ];
+
+const MODEL_NAME = 'UserCredential';
+const COLLECTION_NAME = 'credentials';
 
 // User credential schema
 
@@ -39,16 +39,29 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Legacy fields. New Vendor/Supervisor accounts never use a brand.
     brandName: {
       type: String,
-      enum: ['', ...BRAND_OPTIONS],
+      trim: true,
       default: '',
+    },
+
+    companyName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
+    // Supervisors are linked directly to a Vendor account.
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
       index: true,
     },
 
-    // Legacy field kept so older credential documents can still be read.
-    // New code uses brandName only.
-    companyName: {
+    // Denormalized display name keeps common reads fast. It is refreshed when
+    // the Vendor changes their own full name.
+    vendorName: {
       type: String,
       trim: true,
       default: '',
@@ -68,7 +81,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ['admin', 'subadmin', 'vendor', 'supervisor'],
+      enum: ALL_ROLES,
       required: true,
       default: 'vendor',
       index: true,
@@ -85,70 +98,39 @@ const userSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+
+
+    // PAN, Aadhaar and uploaded identity documents are deliberately excluded
+    // from normal queries. Only the Admin identity endpoints opt in with
+    // .select('+identity').
+    identity: {
+      type: identitySchema,
+      select: false,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-userSchema.pre('validate', function enforceBrandAssignment() {
-  if (BRAND_ROLES.includes(this.role)) {
-    if (
-      !this.brandName &&
-      BRAND_OPTIONS.includes(this.companyName)
-    ) {
-      this.brandName = this.companyName;
-    }
+// Relationship-aware read indexes keep Vendor dropdowns and Supervisor lists
+// efficient as the credential collection grows.
+userSchema.index({ role: 1, isActive: 1, userName: 1 });
+userSchema.index({ vendorId: 1, role: 1, createdAt: -1 });
 
-    if (!BRAND_OPTIONS.includes(this.brandName)) {
-      this.invalidate(
-        'brandName',
-        'Vendor and Supervisor accounts must have a valid brand'
-      );
-    }
-  }
-});
-
-const MODEL_NAME = 'UserCredential';
-const COLLECTION_NAME = 'credentials';
-
-const ALL_ROLES = [
-  'admin',
-  'subadmin',
-  'vendor',
-  'supervisor',
-];
-
-// Brand and user lookup helpers
-
-const getEffectiveBrand = (user) => {
-  if (!user) {
-    return '';
+// Never persist a brand relationship for Vendor or Supervisor credentials.
+// Vendors also cannot themselves point at another Vendor.
+userSchema.pre('validate', function normalizeAccountRelationship() {
+  if (['vendor', 'supervisor'].includes(this.role)) {
+    this.brandName = '';
+    this.companyName = '';
   }
 
-  if (BRAND_OPTIONS.includes(user.brandName)) {
-    return user.brandName;
+  if (this.role !== 'supervisor') {
+    this.vendorId = null;
+    this.vendorName = '';
   }
-
-  if (BRAND_OPTIONS.includes(user.companyName)) {
-    return user.companyName;
-  }
-
-  return '';
-};
-
-const buildBrandFilter = (brandName) => ({
-  $or: [
-    {
-      brandName,
-    },
-    {
-      brandName: {
-        $in: ['', null],
-      },
-      companyName: brandName,
-    },
-  ],
 });
 
 // Initialize and access the credential collection
@@ -172,6 +154,44 @@ const ensureCredentialCollection = async () => {
 
   await User.createCollection();
   await User.syncIndexes();
+
+  // One-time-safe migration: Vendor/Supervisor credentials must no longer carry
+  // a brand association. Existing Supervisors are left unassigned to a Vendor
+  // because inferring a Vendor from an old shared brand would be ambiguous.
+  await Promise.all([
+    User.updateMany(
+      {
+        role: {
+          $in: ['vendor', 'supervisor'],
+        },
+        $or: [
+          { brandName: { $nin: ['', null] } },
+          { companyName: { $nin: ['', null] } },
+        ],
+      },
+      {
+        $set: {
+          brandName: '',
+          companyName: '',
+        },
+      }
+    ),
+    User.updateMany(
+      {
+        role: 'vendor',
+        $or: [
+          { vendorId: { $ne: null } },
+          { vendorName: { $nin: ['', null] } },
+        ],
+      },
+      {
+        $set: {
+          vendorId: null,
+          vendorName: '',
+        },
+      }
+    ),
+  ]);
 };
 
 // Find users by normalized email or MongoDB ID
@@ -202,7 +222,10 @@ const findUserByEmail = async (
 
 const findUserById = async (
   id,
-  { includePassword = false } = {}
+  {
+    includePassword = false,
+    includeIdentity = false,
+  } = {}
 ) => {
   if (!mongoose.isValidObjectId(id)) {
     return null;
@@ -215,14 +238,46 @@ const findUserById = async (
     query.select('+passwordHash');
   }
 
+  if (includeIdentity) {
+    query.select('+identity');
+  }
+
   return query;
 };
 
-// List portal users according to role and optional brand
+const findActiveVendorById = async (id) => {
+  if (!mongoose.isValidObjectId(id)) {
+    return null;
+  }
+
+  return getUserModel()
+    .findOne({
+      _id: id,
+      role: 'vendor',
+      isActive: true,
+    })
+    .select('_id userName email isActive role')
+    .lean();
+};
+
+const listActiveVendors = async () =>
+  getUserModel()
+    .find({
+      role: 'vendor',
+      isActive: true,
+    })
+    .select('_id userName email')
+    .sort({
+      userName: 1,
+      createdAt: 1,
+    })
+    .lean();
+
+// List portal users according to role and optional Vendor ownership.
 
 const listUsersByRoles = async (
   roles = ALL_ROLES,
-  { brandName = '' } = {}
+  { vendorId = '' } = {}
 ) => {
   const User = getUserModel();
   const validRoles = roles.filter((role) =>
@@ -235,15 +290,12 @@ const listUsersByRoles = async (
     },
   };
 
-  if (BRAND_OPTIONS.includes(brandName)) {
-    Object.assign(
-      filter,
-      buildBrandFilter(brandName)
-    );
+  if (mongoose.isValidObjectId(vendorId)) {
+    filter.vendorId = vendorId;
   }
 
   return User.find(filter)
-    .select('-profilePicture')
+    .select('-profilePicture -passwordHash')
     .sort({
       createdAt: -1,
     })
@@ -259,7 +311,7 @@ const listActivePortalUsers = async () => {
       $in: ['subadmin', 'vendor', 'supervisor'],
     },
   })
-    .select('-profilePicture')
+    .select('-profilePicture -passwordHash')
     .sort({
       createdAt: -1,
     })
@@ -269,15 +321,13 @@ const listActivePortalUsers = async () => {
 // Export authentication model helpers
 
 module.exports = {
-  BRAND_OPTIONS,
-  BRAND_ROLES,
   ALL_ROLES,
-  getEffectiveBrand,
-  buildBrandFilter,
   getUserModel,
   ensureCredentialCollection,
   findUserByEmail,
   findUserById,
+  findActiveVendorById,
+  listActiveVendors,
   listUsersByRoles,
   listActivePortalUsers,
 };

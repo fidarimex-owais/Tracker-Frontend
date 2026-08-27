@@ -1,15 +1,9 @@
-// Validation patterns for email and mobile numbers
+// Validation patterns for email, mobile numbers and Vendor relationships
 
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 const MOBILE_RE = /^\+?[0-9]{7,15}$/;
-
-// Supported brands and portal roles
-
-const BRAND_OPTIONS = [
-  'Hi Banana',
-  'Joker',
-  'Banana Man',
-];
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+const { validateIdentityPayload } = require('../identity/identity.validation');
 
 const ROLE_OPTIONS = [
   'vendor',
@@ -17,12 +11,10 @@ const ROLE_OPTIONS = [
   'supervisor',
 ];
 
-const BRAND_REQUIRED_ROLES = [
-  'vendor',
-  'supervisor',
-];
-
-// Validate and normalize Admin-created user account data
+// Validate and normalize portal-created user account data.
+// Vendor IDs never accept a brand. Supervisor IDs require a Vendor unless the
+// currently signed-in creator is that Vendor, in which case the relationship is
+// assigned automatically by the service layer.
 
 const validateCreateId = (req, res, next) => {
   const role =
@@ -30,12 +22,10 @@ const validateCreateId = (req, res, next) => {
       ? req.body.role.trim().toLowerCase()
       : '';
 
-  const brandName =
-    typeof req.body?.brandName === 'string'
-      ? req.body.brandName.trim()
-      : typeof req.body?.companyName === 'string'
-        ? req.body.companyName.trim()
-        : '';
+  const vendorId =
+    typeof req.body?.vendorId === 'string'
+      ? req.body.vendorId.trim()
+      : '';
 
   const userName =
     typeof req.body?.userName === 'string'
@@ -64,7 +54,8 @@ const validateCreateId = (req, res, next) => {
       ? req.body.confirmPassword
       : '';
 
-  const errors = [];
+  const identity = validateIdentityPayload(req.body);
+  const errors = [...identity.errors];
 
   if (!ROLE_OPTIONS.includes(role)) {
     errors.push({
@@ -74,12 +65,13 @@ const validateCreateId = (req, res, next) => {
   }
 
   if (
-    BRAND_REQUIRED_ROLES.includes(role) &&
-    !BRAND_OPTIONS.includes(brandName)
+    role === 'supervisor' &&
+    req.user?.role !== 'vendor' &&
+    !OBJECT_ID_RE.test(vendorId)
   ) {
     errors.push({
-      field: 'brandName',
-      message: 'Select Hi Banana, Joker, or Banana Man',
+      field: 'vendorId',
+      message: 'Select a Vendor',
     });
   }
 
@@ -127,25 +119,22 @@ const validateCreateId = (req, res, next) => {
   }
 
   req.body = {
-    brandName: BRAND_REQUIRED_ROLES.includes(role)
-      ? brandName
-      : '',
+    vendorId: role === 'supervisor' ? vendorId : '',
     userName,
     mobileNumber,
     email,
     role,
     password,
     confirmPassword,
+    panNumber: identity.panNumber,
+    aadhaarNumber: identity.aadhaarNumber,
+    documents: identity.documents,
   };
 
   return next();
 };
 
-// Export validation options and middleware
-
 module.exports = {
-  BRAND_OPTIONS,
   ROLE_OPTIONS,
-  BRAND_REQUIRED_ROLES,
   validateCreateId,
 };

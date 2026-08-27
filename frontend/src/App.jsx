@@ -2,7 +2,6 @@
 
 import {
   BrowserRouter,
-  Navigate,
   Route,
   Routes,
 } from 'react-router-dom';
@@ -23,6 +22,7 @@ import UserManagement from './pages/admin/UserManagement';
 import AdminQrScanner from './pages/admin/AdminQrScanner';
 import AdminBarcodeScanner from './pages/admin/AdminBarcodeScanner';
 import QrBrandDetails from './pages/admin/QrBrandDetails';
+import IdentityDocuments from './pages/admin/IdentityDocuments';
 
 import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
@@ -30,6 +30,7 @@ import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 import QRCodeGenerator from './pages/QRCodeGenerator';
 import RecoverySheet from './pages/recovery/RecoverySheet';
 import Profile from './pages/profile/Profile';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
@@ -74,6 +75,11 @@ export default function App() {
               <Route
                 path="users"
                 element={<UserManagement />}
+              />
+
+              <Route
+                path="identity-documents"
+                element={<IdentityDocuments />}
               />
 
               <Route
@@ -243,7 +249,7 @@ export default function App() {
 
           <Route
             path="*"
-            element={<Navigate to="/" replace />}
+            element={<NotFound />}
           />
         </Routes>
         </AuthProvider>
