@@ -35,6 +35,7 @@ const ROLE_OPTIONS = {
 
 const INITIAL_FORM = {
   vendorId: '',
+  companyName: '',
   userName: '',
   mobileNumber: '',
   email: '',
@@ -79,6 +80,7 @@ export default function CreateId() {
   );
 
   const isSupervisor = form.role === 'supervisor';
+  const isVendor = form.role === 'vendor';
   const needsVendorDropdown =
     isSupervisor && user.role !== 'vendor';
 
@@ -131,12 +133,17 @@ export default function CreateId() {
       ...(name === 'role' && value !== 'supervisor'
         ? { vendorId: '' }
         : {}),
+      ...(name === 'role' && value !== 'vendor'
+        ? { companyName: '' }
+        : {}),
     }));
 
     setFieldErrors((current) => ({
       ...current,
       [name]: '',
-      ...(name === 'role' ? { vendorId: '' } : {}),
+      ...(name === 'role'
+        ? { vendorId: '', companyName: '' }
+        : {}),
     }));
 
     setError('');
@@ -175,6 +182,15 @@ export default function CreateId() {
 
     if (needsVendorDropdown && !form.vendorId) {
       errors.vendorId = 'Select a Vendor';
+    }
+
+    if (
+      isVendor &&
+      (form.companyName.trim().length < 2 ||
+        form.companyName.trim().length > 120)
+    ) {
+      errors.companyName =
+        'Enter the Vendor company name (2 to 120 characters)';
     }
 
     if (form.userName.trim().length < 2) {
@@ -237,6 +253,9 @@ export default function CreateId() {
             isSupervisor && user.role !== 'vendor'
               ? form.vendorId
               : '',
+          companyName: isVendor
+            ? form.companyName.trim().replace(/\s+/g, ' ')
+            : '',
           userName: form.userName.trim(),
           mobileNumber: form.mobileNumber.trim(),
           email: form.email.trim(),
@@ -313,7 +332,7 @@ export default function CreateId() {
         </h2>
 
         <p className="mt-2 text-slate-500">
-          Vendor IDs are brand-independent. Supervisor IDs are assigned directly to a Vendor.
+          Vendor IDs remain brand-independent and can store their own company name. Supervisor IDs are assigned directly to a Vendor.
         </p>
       </div>
 
@@ -373,7 +392,11 @@ export default function CreateId() {
                 <input
                   type="text"
                   readOnly
-                  value={user.userName || 'Current Vendor'}
+                  value={
+                    user.companyName
+                      ? `${user.userName || 'Current Vendor'} — ${user.companyName}`
+                      : user.userName || 'Current Vendor'
+                  }
                   className={inputClass(fieldErrors.vendorId)}
                 />
               ) : (
@@ -396,10 +419,32 @@ export default function CreateId() {
                       value={vendor.id}
                     >
                       {vendor.userName}
+                      {vendor.companyName
+                        ? ` — ${vendor.companyName}`
+                        : ''}
                     </option>
                   ))}
                 </select>
               )}
+            </Field>
+          ) : isVendor ? (
+            <Field
+              label="Company Name"
+              error={fieldErrors.companyName}
+            >
+              <input
+                type="text"
+                name="companyName"
+                maxLength="120"
+                autoComplete="organization"
+                value={form.companyName}
+                onChange={handleChange}
+                placeholder="Enter company name, e.g. Rajmata"
+                className={inputClass(fieldErrors.companyName)}
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Company Name is descriptive only and does not link this Vendor ID to a Brand.
+              </span>
             </Field>
           ) : (
             <div />
@@ -490,7 +535,7 @@ export default function CreateId() {
                 multiple
                 accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 onChange={handleDocumentsChange}
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:font-semibold file:text-orange-700"
+                className="identity-file-input block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600"
               />
               <span className="mt-1 block text-xs text-slate-500">
                 Up to 5 PDF/JPG/PNG files, 1 KB to 100 KB each. Identity data and documents are available only to Admin users after creation.

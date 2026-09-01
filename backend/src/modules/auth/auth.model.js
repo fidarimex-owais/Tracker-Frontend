@@ -39,7 +39,8 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
 
-    // Legacy fields. New Vendor/Supervisor accounts never use a brand.
+    // Brand remains a legacy-only field. Vendor accounts may store a free-text
+    // company name, but that company name is not a Brand relationship.
     brandName: {
       type: String,
       trim: true,
@@ -49,6 +50,7 @@ const userSchema = new mongoose.Schema(
     companyName: {
       type: String,
       trim: true,
+      maxlength: 120,
       default: '',
     },
 
@@ -119,11 +121,15 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ role: 1, isActive: 1, userName: 1 });
 userSchema.index({ vendorId: 1, role: 1, createdAt: -1 });
 
-// Never persist a brand relationship for Vendor or Supervisor credentials.
-// Vendors also cannot themselves point at another Vendor.
+// Never persist a Brand relationship for Vendor or Supervisor credentials.
+// A Vendor may keep a free-text companyName (for example Rajmata, Jayvant,
+// Korale). Supervisors are linked to a Vendor account, not to a company/brand.
 userSchema.pre('validate', function normalizeAccountRelationship() {
   if (['vendor', 'supervisor'].includes(this.role)) {
     this.brandName = '';
+  }
+
+  if (this.role === 'supervisor') {
     this.companyName = '';
   }
 
@@ -156,22 +162,29 @@ const ensureCredentialCollection = async () => {
   await User.syncIndexes();
 
   // One-time-safe migration: Vendor/Supervisor credentials must no longer carry
-  // a brand association. Existing Supervisors are left unassigned to a Vendor
-  // because inferring a Vendor from an old shared brand would be ambiguous.
+  // a Brand relationship. Vendor companyName is intentionally preserved because
+  // it is now a free-text company label, not a Brand association.
   await Promise.all([
     User.updateMany(
       {
         role: {
           $in: ['vendor', 'supervisor'],
         },
-        $or: [
-          { brandName: { $nin: ['', null] } },
-          { companyName: { $nin: ['', null] } },
-        ],
+        brandName: { $nin: ['', null] },
       },
       {
         $set: {
           brandName: '',
+        },
+      }
+    ),
+    User.updateMany(
+      {
+        role: 'supervisor',
+        companyName: { $nin: ['', null] },
+      },
+      {
+        $set: {
           companyName: '',
         },
       }
@@ -256,7 +269,7 @@ const findActiveVendorById = async (id) => {
       role: 'vendor',
       isActive: true,
     })
-    .select('_id userName email isActive role')
+    .select('_id userName companyName email isActive role')
     .lean();
 };
 
@@ -266,7 +279,7 @@ const listActiveVendors = async () =>
       role: 'vendor',
       isActive: true,
     })
-    .select('_id userName email')
+    .select('_id userName companyName email')
     .sort({
       userName: 1,
       createdAt: 1,

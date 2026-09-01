@@ -194,7 +194,11 @@ signupRequestSchema.index({
 
 signupRequestSchema.pre('validate', function normalizeSignupRelationship() {
   this.brandName = '';
-  this.companyName = '';
+
+  // companyName belongs only to Vendor signup requests and is not a Brand.
+  if (this.role !== 'vendor') {
+    this.companyName = '';
+  }
 
   if (this.role !== 'supervisor') {
     this.vendorId = null;

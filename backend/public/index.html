@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Plot Registration</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: #222;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        #message {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Plot Registration</h1>
+
+        <form id="recordForm">
+
+            <!-- Brand -->
+            <div class="form-group">
+
+                <label for="brandName">
+                    Brand Name
+                </label>
+
+                <select id="brandName" name="brandName" required>
+
+                    <option value="">
+                        Select Brand
+                    </option>
+
+                    <option value="Hi Banana">
+                        Hi Banana
+                    </option>
+
+                    <option value="Joker">
+                        Joker
+                    </option>
+
+                    <option value="Banana Man">
+                        Banana Man
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- Vendor -->
+            <div class="form-group">
+
+                <label for="vendorName">
+                    Vendor Name
+                </label>
+
+                <input
+                    type="text"
+                    id="vendorName"
+                    name="vendorName"
+                    placeholder="Enter vendor name"
+                    required
+                >
+
+            </div>
+
+
+            <!-- Farmer -->
+            <div class="form-group">
+
+                <label for="farmerName">
+                    Farmer Name
+                </label>
+
+                <input
+                    type="text"
+                    id="farmerName"
+                    name="farmerName"
+                    placeholder="Enter farmer name"
+                    required
+                >
+
+            </div>
+
+
+            <!-- Number of Hands -->
+            <div class="form-group">
+
+                <label for="numberOfHands">
+                    Number of Hands
+                </label>
+
+                <select
+                    id="numberOfHands"
+                    name="numberOfHands"
+                    required
+                >
+
+                    <option value="">
+                        Select Number of Hands
+                    </option>
+
+                    <option value="4">
+                        4 Hand
+                    </option>
+
+                    <option value="5">
+                        5 Hand
+                    </option>
+
+                    <option value="6">
+                        6 Hand
+                    </option>
+
+                    <option value="8">
+                        8 Hand
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button type="submit">
+                Submit
+            </button>
+
+        </form>
+
+
+        <div id="message"></div>
+
+    </div>
+
+
+    <script>
+
+        const form = document.getElementById("recordForm");
+
+        const message = document.getElementById("message");
+
+
+        form.addEventListener("submit", async (event) => {
+
+            event.preventDefault();
+
+
+            const formData = {
+
+                brandName:
+                    document.getElementById("brandName").value,
+
+                vendorName:
+                    document.getElementById("vendorName").value,
+
+                farmerName:
+                    document.getElementById("farmerName").value,
+
+                numberOfHands:
+                    Number(
+                        document.getElementById("numberOfHands").value
+                    )
+
+            };
+
+
+            try {
+
+                const response = await fetch(
+                    "/api/records",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify(formData)
+                    }
+                );
+
+
+                const result = await response.json();
+
+
+                if (response.ok) {
+
+                    message.textContent =
+                        "Record saved successfully.";
+
+                    form.reset();
+
+                    console.log(result);
+
+                } else {
+
+                    message.textContent =
+                        result.message || "Failed to save record.";
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+                message.textContent =
+                    "Server connection failed.";
+
+            }
+
+        });
+
+    </script>
+
+</body>
+
+</html>

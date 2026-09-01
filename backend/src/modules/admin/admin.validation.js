@@ -27,6 +27,11 @@ const validateCreateId = (req, res, next) => {
       ? req.body.vendorId.trim()
       : '';
 
+  const companyName =
+    typeof req.body?.companyName === 'string'
+      ? req.body.companyName.trim().replace(/\s+/g, ' ')
+      : '';
+
   const userName =
     typeof req.body?.userName === 'string'
       ? req.body.userName.trim()
@@ -75,6 +80,16 @@ const validateCreateId = (req, res, next) => {
     });
   }
 
+  if (
+    role === 'vendor' &&
+    (companyName.length < 2 || companyName.length > 120)
+  ) {
+    errors.push({
+      field: 'companyName',
+      message: 'Enter the Vendor company name (2 to 120 characters)',
+    });
+  }
+
   if (userName.length < 2) {
     errors.push({
       field: 'userName',
@@ -120,6 +135,7 @@ const validateCreateId = (req, res, next) => {
 
   req.body = {
     vendorId: role === 'supervisor' ? vendorId : '',
+    companyName: role === 'vendor' ? companyName : '',
     userName,
     mobileNumber,
     email,
@@ -134,7 +150,43 @@ const validateCreateId = (req, res, next) => {
   return next();
 };
 
+
+const validateIdentityUpdate = (req, res, next) => {
+  const identity = validateIdentityPayload(req.body);
+  const companyName =
+    typeof req.body?.companyName === 'string'
+      ? req.body.companyName.trim().replace(/\s+/g, ' ')
+      : '';
+
+  const errors = [...identity.errors];
+
+  if (companyName.length > 120) {
+    errors.push({
+      field: 'companyName',
+      message: 'Company name must be 120 characters or fewer',
+    });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors,
+    });
+  }
+
+  req.body = {
+    panNumber: identity.panNumber,
+    aadhaarNumber: identity.aadhaarNumber,
+    documents: identity.documents,
+    companyName,
+  };
+
+  return next();
+};
+
 module.exports = {
   ROLE_OPTIONS,
   validateCreateId,
+  validateIdentityUpdate,
 };

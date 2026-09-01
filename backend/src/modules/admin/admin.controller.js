@@ -64,6 +64,57 @@ const openIdentityDocument = async (req, res) => {
   });
 };
 
+const updateIdentityDocumentRecord = async (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Pragma', 'no-cache');
+
+  const record = await service.updateIdentitySubmission(
+    req.params.source,
+    req.params.id,
+    req.body
+  );
+
+  res.json({
+    success: true,
+    message: 'Identity information updated',
+    record,
+  });
+};
+
+const deleteIdentityDocumentRecord = async (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Pragma', 'no-cache');
+
+  const deleted = await service.deleteIdentitySubmission(
+    req.params.source,
+    req.params.id
+  );
+
+  res.json({
+    success: true,
+    message: 'Identity information and uploaded documents deleted',
+    deleted,
+  });
+};
+
+const deleteIdentityDocumentFile = async (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Pragma', 'no-cache');
+
+  const record = await service.deleteIdentityDocument(
+    req.params.source,
+    req.params.id,
+    req.params.documentId
+  );
+
+  res.json({
+    success: true,
+    message: 'Document deleted',
+    record,
+  });
+};
+
+
 // Signup request review handlers
 
 const listSignupRequests = async (req, res) => {
@@ -192,6 +243,9 @@ module.exports = {
   listActiveIds,
   listIdentityDocuments,
   openIdentityDocument,
+  updateIdentityDocumentRecord,
+  deleteIdentityDocumentRecord,
+  deleteIdentityDocumentFile,
   listSignupRequests,
   getSignupRequestCount,
   approveSignupRequest,

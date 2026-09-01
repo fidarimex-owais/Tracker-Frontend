@@ -22,7 +22,7 @@ const { verifyGoogleIdToken } = require('./googleIdentity.service');
 
 const {
   createIdentityRecord,
-  cleanupDocuments,
+  cleanupIdentityRecord,
 } = require('../identity/identity.service');
 
 // Password hashing configuration
@@ -45,6 +45,7 @@ const sanitizeUser = (user) => ({
   userName: user.userName || '',
   fullName: user.userName || '',
   brandName: '',
+  companyName: user.companyName || '',
   vendorId: user.vendorId ? user.vendorId.toString() : '',
   vendorName: user.vendorName || '',
   mobileNumber: user.mobileNumber || '',
@@ -59,6 +60,7 @@ const sanitizeUser = (user) => ({
 const sanitizeSignupRequest = (request) => ({
   id: request._id.toString(),
   brandName: '',
+  companyName: request.companyName || '',
   vendorId: request.vendorId ? request.vendorId.toString() : '',
   vendorName: request.vendorName || '',
   userName: request.userName,
@@ -88,7 +90,7 @@ const assertUserCanAccessPortal = (user, requestedRole) => {
   }
 };
 
-// Create a pending Vendor or Supervisor signup request
+// Create a pending Supervisor signup request
 
 const signup = async ({
   vendorId,
@@ -102,20 +104,20 @@ const signup = async ({
   documents,
 }) => {
   const normalizedEmail = email.trim().toLowerCase();
-  const eligibleApproverRoles =
-    getApproverRolesForRequestRole(role);
 
-  if (eligibleApproverRoles.length === 0) {
+  // Defense in depth: the public signup service itself accepts Supervisors only,
+  // even if validation middleware is accidentally bypassed.
+  if (role !== 'supervisor') {
     throw createHttpError(
       403,
-      'Public signup is available only for Sub-Admin, Vendor, or Supervisor'
+      'Public registration is available only for Supervisor accounts.'
     );
   }
 
-  const vendorPromise =
-    role === 'supervisor'
-      ? findActiveVendorById(vendorId)
-      : Promise.resolve(null);
+  const eligibleApproverRoles =
+    getApproverRolesForRequestRole(role);
+
+  const vendorPromise = findActiveVendorById(vendorId);
 
   // Run independent checks and password hashing concurrently to reduce signup
   // latency without reducing bcrypt strength or validation coverage.
@@ -158,6 +160,7 @@ const signup = async ({
   try {
     request = await SignupRequest.create({
       brandName: '',
+      companyName: '',
       vendorId: selectedVendor?._id || null,
       vendorName: selectedVendor?.userName || '',
       userName,
@@ -170,7 +173,7 @@ const signup = async ({
       status: 'pending',
     });
   } catch (error) {
-    await cleanupDocuments(identity.documents);
+    await cleanupIdentityRecord(identity);
     if (error?.code === 11000) {
       throw createHttpError(
         409,
@@ -190,6 +193,7 @@ const listVendorOptions = async () => {
   return vendors.map((vendor) => ({
     id: vendor._id.toString(),
     userName: vendor.userName || 'Unnamed Vendor',
+    companyName: vendor.companyName || '',
   }));
 };
 

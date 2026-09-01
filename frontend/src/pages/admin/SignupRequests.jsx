@@ -28,10 +28,10 @@ const descriptionForUser = (user) => {
   }
 
   if (user.role === 'admin') {
-    return 'Sub-Admin, Vendor, and Supervisor signup requests are shown here. Supervisor requests include their selected Vendor.';
+    return 'Sub-Admin, Vendor, and Supervisor signup requests are shown here. Vendor requests include the company name they entered, and Supervisor requests include their selected Vendor.';
   }
 
-  return 'Vendor and Supervisor signup requests are shown here. Supervisor requests include their selected Vendor.';
+  return 'Vendor and Supervisor signup requests are shown here. Vendor requests include the company name they entered, and Supervisor requests include their selected Vendor.';
 };
 
 export default function SignupRequests() {
@@ -237,7 +237,7 @@ export default function SignupRequests() {
           <thead className="bg-slate-50 text-left text-slate-500">
             <tr>
               <th className="px-4 py-3 font-semibold">Name</th>
-              <th className="px-4 py-3 font-semibold">Vendor</th>
+              <th className="px-4 py-3 font-semibold">Vendor / Company</th>
               <th className="px-4 py-3 font-semibold">Role</th>
               <th className="px-4 py-3 font-semibold">Email</th>
               <th className="px-4 py-3 font-semibold">Action</th>
@@ -290,11 +290,16 @@ export default function SignupRequests() {
                           {vendors.map((vendor) => (
                             <option key={vendor.id} value={vendor.id}>
                               {vendor.userName}
+                              {vendor.companyName
+                                ? ` — ${vendor.companyName}`
+                                : ''}
                             </option>
                           ))}
                         </select>
                       ) : request.role === 'supervisor' ? (
                         request.vendorName || 'Assigned to you'
+                      ) : request.role === 'vendor' ? (
+                        request.companyName || 'Not provided'
                       ) : (
                         'Not applicable'
                       )}

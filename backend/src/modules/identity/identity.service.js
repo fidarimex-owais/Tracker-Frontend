@@ -1,4 +1,9 @@
 const crypto = require('crypto');
+const { getUserDb } = require('../../config/db');
+const {
+  getIdentityRegistryModel,
+  ensureIdentityRegistryIndexes,
+} = require('./identity.registry.model');
 
 const ENCRYPTION_VERSION = 'v1';
 const DOWNLOAD_URL_TTL_SECONDS = 5 * 60;
@@ -73,6 +78,298 @@ const decryptSensitiveValue = (encryptedValue) => {
     decipher.update(Buffer.from(encryptedBase64, 'base64')),
     decipher.final(),
   ]).toString('utf8');
+};
+
+const duplicateIdentityError = () =>
+  createHttpError(
+    409,
+    'This PAN Card number or Aadhaar Card number is already registered to another account or pending registration.'
+  );
+
+const createIdentityLookupHash = (kind, value) =>
+  crypto
+    .createHmac('sha256', getEncryptionKey())
+    .update(`identity-${kind}-v1:${String(value)}`, 'utf8')
+    .digest('hex');
+
+const normalizeRecordId = (value) => String(value || '');
+
+const assertNoLegacyIdentityConflict = async ({
+  panNumber,
+  aadhaarNumber,
+  excludeSource = '',
+  excludeRecordId = '',
+}) => {
+  const userDb = getUserDb();
+  const sources = [
+    {
+      source: 'user',
+      collection: userDb.collection('credentials'),
+    },
+    {
+      source: 'signup-request',
+      collection: userDb.collection('signup_requests'),
+    },
+  ];
+
+  for (const item of sources) {
+    const cursor = item.collection.find(
+      {
+        'identity.panEncrypted': { $exists: true },
+        'identity.aadhaarEncrypted': { $exists: true },
+        $or: [
+          { 'identity.registryId': { $exists: false } },
+          { 'identity.registryId': null },
+        ],
+      },
+      {
+        projection: {
+          _id: 1,
+          'identity.panEncrypted': 1,
+          'identity.aadhaarEncrypted': 1,
+        },
+      }
+    );
+
+    for await (const record of cursor) {
+      if (
+        item.source === excludeSource &&
+        normalizeRecordId(record._id) === normalizeRecordId(excludeRecordId)
+      ) {
+        continue;
+      }
+
+      try {
+        const existingPan = decryptSensitiveValue(
+          record.identity?.panEncrypted
+        );
+        const existingAadhaar = decryptSensitiveValue(
+          record.identity?.aadhaarEncrypted
+        );
+
+        if (
+          existingPan === String(panNumber) ||
+          existingAadhaar === String(aadhaarNumber)
+        ) {
+          throw duplicateIdentityError();
+        }
+      } catch (error) {
+        if (error?.statusCode === 409) {
+          throw error;
+        }
+
+        console.error(
+          `Unable to inspect legacy identity record ${item.source}:${record._id}`,
+          error
+        );
+        throw createHttpError(
+          500,
+          'Unable to verify PAN/Aadhaar uniqueness against existing identity records. Contact an Admin.'
+        );
+      }
+    }
+  }
+};
+
+const buildIdentityHashes = (panNumber, aadhaarNumber) => ({
+  panHash: createIdentityLookupHash('pan', panNumber),
+  aadhaarHash: createIdentityLookupHash('aadhaar', aadhaarNumber),
+});
+
+const assertIdentityNumbersAvailable = async ({
+  panNumber,
+  aadhaarNumber,
+  currentRegistryId = null,
+  excludeSource = '',
+  excludeRecordId = '',
+}) => {
+  await Promise.all([
+    ensureIdentityRegistryIndexes(),
+    assertNoLegacyIdentityConflict({
+      panNumber,
+      aadhaarNumber,
+      excludeSource,
+      excludeRecordId,
+    }),
+  ]);
+
+  const IdentityRegistry = getIdentityRegistryModel();
+  const { panHash, aadhaarHash } = buildIdentityHashes(
+    panNumber,
+    aadhaarNumber
+  );
+  const filter = {
+    $or: [
+      { panHash },
+      { aadhaarHash },
+    ],
+  };
+
+  if (currentRegistryId) {
+    filter._id = { $ne: currentRegistryId };
+  }
+
+  const conflict = await IdentityRegistry.findOne(filter)
+    .select('_id')
+    .lean();
+
+  if (conflict) {
+    throw duplicateIdentityError();
+  }
+
+  return {
+    panHash,
+    aadhaarHash,
+  };
+};
+
+const reserveIdentityNumbers = async ({
+  panNumber,
+  aadhaarNumber,
+  excludeSource = '',
+  excludeRecordId = '',
+}) => {
+  const hashes = await assertIdentityNumbersAvailable({
+    panNumber,
+    aadhaarNumber,
+    excludeSource,
+    excludeRecordId,
+  });
+  const IdentityRegistry = getIdentityRegistryModel();
+
+  try {
+    return await IdentityRegistry.create(hashes);
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw duplicateIdentityError();
+    }
+
+    throw error;
+  }
+};
+
+const releaseIdentityRegistry = async (identityOrRegistryId) => {
+  const registryId =
+    identityOrRegistryId?.registryId || identityOrRegistryId;
+
+  if (!registryId) {
+    return;
+  }
+
+  const IdentityRegistry = getIdentityRegistryModel();
+  await IdentityRegistry.deleteOne({ _id: registryId });
+};
+
+const updateIdentityRegistry = async ({
+  currentRegistryId,
+  panNumber,
+  aadhaarNumber,
+  excludeSource = '',
+  excludeRecordId = '',
+}) => {
+  const hashes = await assertIdentityNumbersAvailable({
+    panNumber,
+    aadhaarNumber,
+    currentRegistryId,
+    excludeSource,
+    excludeRecordId,
+  });
+  const IdentityRegistry = getIdentityRegistryModel();
+
+  if (!currentRegistryId) {
+    try {
+      const created = await IdentityRegistry.create(hashes);
+      return {
+        registryId: created._id,
+        rollback: {
+          created: true,
+          registryId: created._id,
+        },
+      };
+    } catch (error) {
+      if (error?.code === 11000) {
+        throw duplicateIdentityError();
+      }
+
+      throw error;
+    }
+  }
+
+  const previous = await IdentityRegistry.findById(
+    currentRegistryId
+  ).lean();
+
+  if (!previous) {
+    try {
+      const created = await IdentityRegistry.create(hashes);
+      return {
+        registryId: created._id,
+        rollback: {
+          created: true,
+          registryId: created._id,
+        },
+      };
+    } catch (error) {
+      if (error?.code === 11000) {
+        throw duplicateIdentityError();
+      }
+
+      throw error;
+    }
+  }
+
+  try {
+    await IdentityRegistry.findByIdAndUpdate(
+      currentRegistryId,
+      {
+        $set: hashes,
+      },
+      {
+        returnDocument: 'after',
+        runValidators: true,
+      }
+    );
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw duplicateIdentityError();
+    }
+
+    throw error;
+  }
+
+  return {
+    registryId: currentRegistryId,
+    rollback: {
+      created: false,
+      registryId: currentRegistryId,
+      previous: {
+        panHash: previous.panHash,
+        aadhaarHash: previous.aadhaarHash,
+      },
+    },
+  };
+};
+
+const rollbackIdentityRegistryUpdate = async (rollback) => {
+  if (!rollback?.registryId) {
+    return;
+  }
+
+  const IdentityRegistry = getIdentityRegistryModel();
+
+  if (rollback.created) {
+    await IdentityRegistry.deleteOne({
+      _id: rollback.registryId,
+    });
+    return;
+  }
+
+  if (rollback.previous) {
+    await IdentityRegistry.updateOne(
+      { _id: rollback.registryId },
+      { $set: rollback.previous }
+    );
+  }
 };
 
 const getCloudinaryConfig = () => {
@@ -274,22 +571,94 @@ const createIdentityRecord = async ({
   documents = [],
   folderKey,
 }) => {
-  // Encryption and uploads are independent once validation has completed.
-  const panEncrypted = encryptSensitiveValue(panNumber);
-  const aadhaarEncrypted = encryptSensitiveValue(aadhaarNumber);
+  // Reserve PAN/Aadhaar before Cloudinary upload so two simultaneous requests
+  // cannot claim the same identity numbers.
+  const reservation = await reserveIdentityNumbers({
+    panNumber,
+    aadhaarNumber,
+  });
+
+  try {
+    const panEncrypted = encryptSensitiveValue(panNumber);
+    const aadhaarEncrypted = encryptSensitiveValue(aadhaarNumber);
+    const uploadedDocuments = await uploadDocuments(
+      documents,
+      folderKey
+    );
+
+    return {
+      registryId: reservation._id,
+      panEncrypted,
+      aadhaarEncrypted,
+      panVerification: 'format_verified',
+      aadhaarVerification: 'checksum_verified',
+      verifiedAt: new Date(),
+      documents: uploadedDocuments,
+    };
+  } catch (error) {
+    await releaseIdentityRegistry(reservation._id);
+    throw error;
+  }
+};
+
+const prepareIdentityUpdate = async ({
+  panNumber,
+  aadhaarNumber,
+  documents = [],
+  folderKey,
+  currentRegistryId = null,
+  excludeSource = '',
+  excludeRecordId = '',
+}) => {
+  // Check before uploading so obvious conflicts fail quickly. The registry
+  // update below is still atomic and catches a race with another request.
+  await assertIdentityNumbersAvailable({
+    panNumber,
+    aadhaarNumber,
+    currentRegistryId,
+    excludeSource,
+    excludeRecordId,
+  });
+
   const uploadedDocuments = await uploadDocuments(
     documents,
     folderKey
   );
 
+  let registryUpdate;
+
+  try {
+    registryUpdate = await updateIdentityRegistry({
+      currentRegistryId,
+      panNumber,
+      aadhaarNumber,
+      excludeSource,
+      excludeRecordId,
+    });
+  } catch (error) {
+    await cleanupDocuments(uploadedDocuments);
+    throw error;
+  }
+
   return {
-    panEncrypted,
-    aadhaarEncrypted,
+    registryId: registryUpdate.registryId,
+    registryRollback: registryUpdate.rollback,
+    panEncrypted: encryptSensitiveValue(panNumber),
+    aadhaarEncrypted: encryptSensitiveValue(aadhaarNumber),
     panVerification: 'format_verified',
     aadhaarVerification: 'checksum_verified',
     verifiedAt: new Date(),
-    documents: uploadedDocuments,
+    uploadedDocuments,
   };
+};
+
+const cleanupIdentityRecord = async (identity) => {
+  if (!identity) {
+    return;
+  }
+
+  await cleanupDocuments(identity.documents || []);
+  await releaseIdentityRegistry(identity.registryId);
 };
 
 const revealIdentityForAdmin = (identity) => {
@@ -352,6 +721,10 @@ const buildPrivateDocumentUrl = (document) => {
 
 module.exports = {
   createIdentityRecord,
+  prepareIdentityUpdate,
+  rollbackIdentityRegistryUpdate,
+  cleanupIdentityRecord,
+  releaseIdentityRegistry,
   revealIdentityForAdmin,
   buildPrivateDocumentUrl,
   cleanupDocuments,

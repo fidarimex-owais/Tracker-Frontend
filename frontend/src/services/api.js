@@ -73,4 +73,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+
+    if (
+      status >= 500 &&
+      status <= 599 &&
+      typeof window !== 'undefined' &&
+      window.location.pathname !== '/500'
+    ) {
+      window.location.assign('/500');
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -153,12 +153,18 @@ const streamCategoryZip = async ({
 
     (async () => {
       for (const barcodeId of barcodeIds) {
+        // Each unique sticker is delivered as two IDENTICAL physical copies:
+        // one for inside the box and one for outside the box. Both files reuse
+        // the same rendered PNG, QR payload and barcode ID; no new identity is
+        // generated for the second copy.
         const pngBuffer = await buildStickerPNG(
           qrPngBase64,
           numberOfHands,
           barcodeId
         );
-        archive.append(pngBuffer, { name: `${barcodeId}.png` });
+
+        archive.append(pngBuffer, { name: `${barcodeId}_inside.png` });
+        archive.append(pngBuffer, { name: `${barcodeId}_outside.png` });
       }
 
       await archive.finalize();
@@ -193,12 +199,17 @@ const buildPrintPageHTML = async ({
     });
   }
 
+  // Render each unique sticker twice as an identical pair. The same base64
+  // image is reused for both copies, so QR, barcode, hand number, dimensions
+  // and print quality are guaranteed to match exactly.
   const imageTags = stickerImages
-    .map(
-      ({ barcodeId, base64 }) =>
-        `<div class="sticker"><img src="data:image/png;base64,${base64}" alt="${barcodeId}" /></div>`
-    )
+    .flatMap(({ barcodeId, base64 }) => [
+      `<div class="sticker" data-copy="inside"><img src="data:image/png;base64,${base64}" alt="${barcodeId} - inside copy" /></div>`,
+      `<div class="sticker" data-copy="outside"><img src="data:image/png;base64,${base64}" alt="${barcodeId} - outside copy" /></div>`,
+    ])
     .join('\n');
+
+  const physicalStickerCount = stickerImages.length * 2;
 
   return `<!DOCTYPE html>
 <html>
@@ -233,7 +244,7 @@ const buildPrintPageHTML = async ({
 </head>
 <body>
   <div class="toolbar">
-    <button onclick="window.print()">Print (${stickerImages.length} stickers)</button>
+    <button onclick="window.print()">Print (${physicalStickerCount} stickers)</button>
   </div>
   <div class="grid">
     ${imageTags}

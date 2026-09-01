@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import {
   Link,
   Navigate,
-  useSearchParams,
 } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { roleHome } from '../../auth/roleHome';
@@ -28,11 +27,7 @@ import {
 
 const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
 
-const SIGNUP_ROLE_OPTIONS = [
-  { value: 'subadmin', label: 'Sub-Admin' },
-  { value: 'vendor', label: 'Vendor' },
-  { value: 'supervisor', label: 'Supervisor' },
-];
+const PUBLIC_SIGNUP_ROLE = 'supervisor';
 
 const INITIAL_FORM = {
   vendorId: '',
@@ -50,19 +45,9 @@ const isValidGmail = (email) =>
 
 export default function Signup() {
   const { user, signup } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const roleFromUrl = searchParams.get('role') || '';
-  const validInitialRole = SIGNUP_ROLE_OPTIONS.some(
-    (option) => option.value === roleFromUrl
-  )
-    ? roleFromUrl
-    : '';
-
-  const [selectedRole, setSelectedRole] = useState(validInitialRole);
   const [form, setForm] = useState(INITIAL_FORM);
   const [vendors, setVendors] = useState([]);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -73,10 +58,6 @@ export default function Signup() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (selectedRole !== 'supervisor') {
-      return;
-    }
-
     let active = true;
     setVendorsLoading(true);
 
@@ -104,7 +85,7 @@ export default function Signup() {
     return () => {
       active = false;
     };
-  }, [selectedRole]);
+  }, []);
 
   if (user) {
     return (
@@ -114,30 +95,6 @@ export default function Signup() {
       />
     );
   }
-
-  const roleLabel = SIGNUP_ROLE_OPTIONS.find(
-    (option) => option.value === selectedRole
-  )?.label;
-
-  const handleRoleChange = (event) => {
-    const role = event.target.value;
-
-    setSelectedRole(role);
-    setForm(INITIAL_FORM);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    setTermsAccepted(false);
-    setDocuments([]);
-    setFieldErrors({});
-    setError('');
-    setSuccess('');
-
-    if (role) {
-      setSearchParams({ role }, { replace: true });
-    } else {
-      setSearchParams({}, { replace: true });
-    }
-  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -190,12 +147,20 @@ export default function Signup() {
     const email = form.email.trim().toLowerCase();
     const errors = {};
 
-    if (!selectedRole) {
-      errors.role = 'Select Sub-Admin, Vendor, or Supervisor before registering';
+    if (!form.vendorId) {
+      errors.vendorId = 'Select a Vendor';
     }
 
-    if (selectedRole === 'supervisor' && !form.vendorId) {
-      errors.vendorId = 'Select a Vendor';
+    if (form.userName.trim().length < 2) {
+      errors.userName = 'Enter your full name';
+    }
+
+    const normalizedMobile = form.mobileNumber
+      .trim()
+      .replace(/[\s-]/g, '');
+
+    if (!/^\+?[0-9]{7,15}$/.test(normalizedMobile)) {
+      errors.mobileNumber = 'Enter a valid mobile number';
     }
 
     if (!isValidGmail(email)) {
@@ -241,12 +206,16 @@ export default function Signup() {
     try {
       const documentPayload = await filesToIdentityPayload(documents);
       const result = await signup({
-        ...form,
+        vendorId: form.vendorId,
+        userName: form.userName.trim(),
+        mobileNumber: normalizedMobile,
+        email,
         panNumber: normalizePan(form.panNumber),
         aadhaarNumber: normalizeAadhaar(form.aadhaarNumber),
+        password: form.password,
+        confirmPassword: form.confirmPassword,
         documents: documentPayload,
-        email,
-        role: selectedRole,
+        role: PUBLIC_SIGNUP_ROLE,
         termsAccepted,
       });
 
@@ -286,313 +255,307 @@ export default function Signup() {
   return (
     <AuthShell
       wide
-      title={roleLabel ? `${roleLabel} Register` : 'Register'}
-      subtitle={
-        roleLabel
-          ? `Create your ${roleLabel} account by filling in the details below.`
-          : 'Select a role to begin your registration.'
-      }
+      title="Supervisor Register"
+      subtitle="Create your Supervisor account by filling in the details below."
     >
-      <div className="space-y-3">
-        <AuthField
-          label="Role"
-          error={fieldErrors.role}
-        >
+      <form
+        onSubmit={submit}
+        noValidate
+        className="space-y-3"
+      >
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600 sm:text-sm">
+          Public registration is available only for Supervisors. Vendor and
+          Sub-Admin IDs are created through the authorized portal workflow.
+        </div>
+
+        {error && <Alert>{error}</Alert>}
+
+        {success && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-5 text-green-700 sm:text-sm">
+            <p className="font-bold">
+              Registration request sent successfully.
+            </p>
+            <p className="mt-1">{success}</p>
+            <Link
+              to="/login?role=supervisor"
+              className="mt-1 inline-block font-bold underline"
+            >
+              Back to Supervisor Login
+            </Link>
+          </div>
+        )}
+
+        <AuthField label="Role">
           <div className="relative">
             <FieldIcon type="role" />
+            <input
+              type="text"
+              value="Supervisor"
+              readOnly
+              aria-readonly="true"
+              className={`${inputClass(false)} cursor-not-allowed bg-slate-50 font-medium`}
+            />
+          </div>
+        </AuthField>
+
+        <AuthField
+          label="Vendor"
+          error={fieldErrors.vendorId}
+        >
+          <div className="relative">
+            <FieldIcon type="vendor" />
             <select
               required
-              name="role"
-              value={selectedRole}
-              onChange={handleRoleChange}
-              className={inputClass(fieldErrors.role, true)}
+              name="vendorId"
+              value={form.vendorId}
+              onChange={handleChange}
+              disabled={vendorsLoading}
+              className={inputClass(fieldErrors.vendorId)}
             >
-              <option value="">Select Role</option>
-              {SIGNUP_ROLE_OPTIONS.map((role) => (
+              <option value="">
+                {vendorsLoading ? 'Loading Vendors...' : 'Select Vendor'}
+              </option>
+              {vendors.map((vendor) => (
                 <option
-                  key={role.value}
-                  value={role.value}
+                  key={vendor.id}
+                  value={vendor.id}
                 >
-                  {role.label}
+                  {vendor.userName}
+                  {vendor.companyName ? ` — ${vendor.companyName}` : ''}
                 </option>
               ))}
             </select>
           </div>
         </AuthField>
 
-        {roleLabel && (
-          <form
-            onSubmit={submit}
-            noValidate
-            className="space-y-3"
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AuthField
+            label="Full Name"
+            error={fieldErrors.userName}
           >
-            {error && <Alert>{error}</Alert>}
-
-            {success && (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs leading-5 text-green-700 sm:text-sm">
-                <p className="font-bold">
-                  Registration request sent successfully.
-                </p>
-                <p className="mt-1">{success}</p>
-                <Link
-                  to={`/login?role=${selectedRole}`}
-                  className="mt-1 inline-block font-bold underline"
-                >
-                  Back to {roleLabel} Login
-                </Link>
-              </div>
-            )}
-
-            {selectedRole === 'supervisor' && (
-              <AuthField
-                label="Vendor"
-                error={fieldErrors.vendorId}
-              >
-                <div className="relative">
-                  <FieldIcon type="vendor" />
-                  <select
-                    required
-                    name="vendorId"
-                    value={form.vendorId}
-                    onChange={handleChange}
-                    disabled={vendorsLoading}
-                    className={inputClass(fieldErrors.vendorId)}
-                  >
-                    <option value="">
-                      {vendorsLoading
-                        ? 'Loading Vendors...'
-                        : 'Select Vendor'}
-                    </option>
-                    {vendors.map((vendor) => (
-                      <option
-                        key={vendor.id}
-                        value={vendor.id}
-                      >
-                        {vendor.userName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </AuthField>
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <AuthField
-                label="Full Name"
-                error={fieldErrors.userName}
-              >
-                <div className="relative">
-                  <FieldIcon type="person" />
-                  <input
-                    required
-                    type="text"
-                    name="userName"
-                    autoComplete="name"
-                    value={form.userName}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    className={inputClass(fieldErrors.userName)}
-                  />
-                </div>
-              </AuthField>
-
-              <AuthField
-                label="Mobile Number"
-                error={fieldErrors.mobileNumber}
-              >
-                <div className="relative">
-                  <FieldIcon type="phone" />
-                  <input
-                    required
-                    type="tel"
-                    name="mobileNumber"
-                    autoComplete="tel"
-                    value={form.mobileNumber}
-                    onChange={handleChange}
-                    placeholder="Enter mobile number"
-                    className={inputClass(fieldErrors.mobileNumber)}
-                  />
-                </div>
-              </AuthField>
-            </div>
-
-            <AuthField
-              label="Gmail Address"
-              error={fieldErrors.email}
-            >
-              <div className="relative">
-                <FieldIcon type="email" />
-                <input
-                  required
-                  type="email"
-                  name="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="name@gmail.com"
-                  className={inputClass(fieldErrors.email)}
-                />
-              </div>
-            </AuthField>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <AuthField label="PAN Card Number" error={fieldErrors.panNumber}>
-                <input
-                  required
-                  type="text"
-                  name="panNumber"
-                  maxLength="10"
-                  autoComplete="off"
-                  value={form.panNumber}
-                  onChange={handleChange}
-                  placeholder="ABCDE1234F"
-                  className={inputClass(fieldErrors.panNumber, true)}
-                />
-              </AuthField>
-
-              <AuthField label="Aadhaar Card Number" error={fieldErrors.aadhaarNumber}>
-                <input
-                  required
-                  type="text"
-                  inputMode="numeric"
-                  name="aadhaarNumber"
-                  maxLength="12"
-                  autoComplete="off"
-                  value={form.aadhaarNumber}
-                  onChange={handleChange}
-                  placeholder="12-digit Aadhaar number"
-                  className={inputClass(fieldErrors.aadhaarNumber, true)}
-                />
-              </AuthField>
-            </div>
-
-            <AuthField label="Additional Documents (Optional)" error={fieldErrors.documents}>
+            <div className="relative">
+              <FieldIcon type="person" />
               <input
-                type="file"
-                multiple
-                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                onChange={handleDocumentsChange}
-                className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-orange-50 file:px-3 file:py-1.5 file:font-bold file:text-orange-700 sm:text-sm"
+                required
+                type="text"
+                name="userName"
+                autoComplete="name"
+                value={form.userName}
+                onChange={handleChange}
+                placeholder="Enter your full name"
+                className={inputClass(fieldErrors.userName)}
               />
-              <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                Up to 5 PDF/JPG/PNG files. Each file must be 1 KB to 100 KB. PAN, Aadhaar, and documents are visible only to Admin users after submission.
-              </p>
-              {documents.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {documents.map((file) => (
-                    <span key={`${file.name}-${file.size}`} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
-                      {file.name} · {formatBytes(file.size)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </AuthField>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <AuthField
-                label="Password"
-                error={fieldErrors.password}
-              >
-                <div className="relative">
-                  <FieldIcon type="lock" />
-                  <input
-                    required
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    minLength="8"
-                    autoComplete="new-password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="Enter password"
-                    className={inputClass(fieldErrors.password, false, true)}
-                  />
-                  <PasswordVisibilityButton
-                    visible={showPassword}
-                    onClick={() => setShowPassword((current) => !current)}
-                  />
-                </div>
-              </AuthField>
-
-              <AuthField
-                label="Confirm Password"
-                error={fieldErrors.confirmPassword}
-              >
-                <div className="relative">
-                  <FieldIcon type="lock" />
-                  <input
-                    required
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    minLength="8"
-                    autoComplete="new-password"
-                    value={form.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm password"
-                    className={inputClass(fieldErrors.confirmPassword, false, true)}
-                  />
-                  <PasswordVisibilityButton
-                    visible={showConfirmPassword}
-                    onClick={() =>
-                      setShowConfirmPassword((current) => !current)
-                    }
-                  />
-                </div>
-              </AuthField>
             </div>
+          </AuthField>
 
-            <div>
-              <label className="flex items-start gap-2 text-xs text-slate-600 sm:text-sm">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(event) => {
-                    setTermsAccepted(event.target.checked);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      termsAccepted: '',
-                    }));
-                    setError('');
-                  }}
-                  aria-invalid={Boolean(fieldErrors.termsAccepted)}
-                  className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-orange-500"
-                />
-                <span>
-                  I agree to the{' '}
-                  <span className="font-semibold text-orange-600">
-                    Terms & Conditions
-                  </span>
+          <AuthField
+            label="Mobile Number"
+            error={fieldErrors.mobileNumber}
+          >
+            <div className="relative">
+              <FieldIcon type="phone" />
+              <input
+                required
+                type="tel"
+                name="mobileNumber"
+                autoComplete="tel"
+                value={form.mobileNumber}
+                onChange={handleChange}
+                placeholder="Enter mobile number"
+                className={inputClass(fieldErrors.mobileNumber)}
+              />
+            </div>
+          </AuthField>
+        </div>
+
+        <AuthField
+          label="Gmail Address"
+          error={fieldErrors.email}
+        >
+          <div className="relative">
+            <FieldIcon type="email" />
+            <input
+              required
+              type="email"
+              name="email"
+              inputMode="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="name@gmail.com"
+              className={inputClass(fieldErrors.email)}
+            />
+          </div>
+        </AuthField>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AuthField
+            label="PAN Card Number"
+            error={fieldErrors.panNumber}
+          >
+            <input
+              required
+              type="text"
+              name="panNumber"
+              maxLength="10"
+              autoComplete="off"
+              value={form.panNumber}
+              onChange={handleChange}
+              placeholder="ABCDE1234F"
+              className={inputClass(fieldErrors.panNumber, true)}
+            />
+          </AuthField>
+
+          <AuthField
+            label="Aadhaar Card Number"
+            error={fieldErrors.aadhaarNumber}
+          >
+            <input
+              required
+              type="text"
+              inputMode="numeric"
+              name="aadhaarNumber"
+              maxLength="12"
+              autoComplete="off"
+              value={form.aadhaarNumber}
+              onChange={handleChange}
+              placeholder="12-digit Aadhaar number"
+              className={inputClass(fieldErrors.aadhaarNumber, true)}
+            />
+          </AuthField>
+        </div>
+
+        <AuthField
+          label="Additional Documents (Optional)"
+          error={fieldErrors.documents}
+        >
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+            onChange={handleDocumentsChange}
+            className="identity-file-input block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 sm:text-sm"
+          />
+          <p className="mt-1 text-[11px] leading-4 text-slate-500">
+            Up to 5 PDF/JPG/PNG files. Each file must be 1 KB to 100 KB. PAN,
+            Aadhaar, and documents are visible only to Admin users after submission.
+          </p>
+          {documents.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {documents.map((file) => (
+                <span
+                  key={`${file.name}-${file.size}`}
+                  className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600"
+                >
+                  {file.name} · {formatBytes(file.size)}
                 </span>
-              </label>
-
-              {fieldErrors.termsAccepted && (
-                <p className="mt-1 text-[11px] font-semibold leading-4 text-red-600">
-                  {fieldErrors.termsAccepted}
-                </p>
-              )}
+              ))}
             </div>
+          )}
+        </AuthField>
 
-            <button
-              type="submit"
-              disabled={busy || !termsAccepted}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
-            >
-              <RegisterIcon />
-              {busy ? 'Sending Request...' : 'Register'}
-            </button>
-          </form>
-        )}
+        <div className="mt-1 grid gap-4 sm:grid-cols-2">
+          <AuthField
+            label="Password"
+            error={fieldErrors.password}
+          >
+            <div className="relative">
+              <FieldIcon type="lock" />
+              <input
+                required
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                minLength="8"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Enter password"
+                className={inputClass(fieldErrors.password, false, true)}
+              />
+              <PasswordVisibilityButton
+                visible={showPassword}
+                onClick={() => setShowPassword((current) => !current)}
+              />
+            </div>
+          </AuthField>
+
+          <AuthField
+            label="Confirm Password"
+            error={fieldErrors.confirmPassword}
+          >
+            <div className="relative">
+              <FieldIcon type="lock" />
+              <input
+                required
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                minLength="8"
+                autoComplete="new-password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm password"
+                className={inputClass(fieldErrors.confirmPassword, false, true)}
+              />
+              <PasswordVisibilityButton
+                visible={showConfirmPassword}
+                onClick={() =>
+                  setShowConfirmPassword((current) => !current)
+                }
+              />
+            </div>
+          </AuthField>
+        </div>
+
+        <div>
+          <label className="flex items-start gap-2 text-xs text-slate-600 sm:text-sm">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(event) => {
+                setTermsAccepted(event.target.checked);
+                setFieldErrors((current) => ({
+                  ...current,
+                  termsAccepted: '',
+                }));
+                setError('');
+              }}
+              aria-invalid={Boolean(fieldErrors.termsAccepted)}
+              className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 accent-orange-500"
+            />
+            <span>
+              I agree to the{' '}
+              <span className="font-semibold text-orange-600">
+                Terms & Conditions
+              </span>
+            </span>
+          </label>
+
+          {fieldErrors.termsAccepted && (
+            <p className="mt-1 text-[11px] font-semibold leading-4 text-red-600">
+              {fieldErrors.termsAccepted}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={busy || !termsAccepted}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
+        >
+          <RegisterIcon />
+          {busy ? 'Sending Request...' : 'Register'}
+        </button>
 
         <p className="text-center text-xs text-slate-600 sm:text-sm">
           Already have an account?{' '}
           <Link
-            to={selectedRole ? `/login?role=${selectedRole}` : '/login'}
+            to="/login?role=supervisor"
             className="font-bold text-orange-600 hover:text-orange-700"
           >
             Login
           </Link>
         </p>
-      </div>
+      </form>
     </AuthShell>
   );
 }

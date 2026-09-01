@@ -9,6 +9,7 @@ import {
 import { AuthProvider } from './auth/AuthContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import ProtectedRoute from './auth/ProtectedRoute';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import LandingPage from './pages/LandingPage';
 import PortalLayout from './layouts/PortalLayout';
 
@@ -30,228 +31,257 @@ import SupervisorDashboard from './pages/supervisor/SupervisorDashboard';
 import QRCodeGenerator from './pages/QRCodeGenerator';
 import RecoverySheet from './pages/recovery/RecoverySheet';
 import Profile from './pages/profile/Profile';
+import HelpCenter from './pages/HelpCenter';
 import NotFound from './pages/NotFound';
+import ServerError from './pages/ServerError';
 
 export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-        <Routes>
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
-
-          <Route
-            path="/"
-            element={<LandingPage />}
-          />
-
-          <Route
-            element={
-              <ProtectedRoute roles={['admin']} />
-            }
-          >
-            <Route
-              path="/admin"
-              element={<PortalLayout />}
-            >
+          <AppErrorBoundary>
+            <Routes>
               <Route
-                index
-                element={<AdminDashboard />}
+                path="/login"
+                element={<Login />}
               />
 
               <Route
-                path="create-id"
-                element={<CreateId />}
+                path="/signup"
+                element={<Signup />}
               />
 
               <Route
-                path="users"
-                element={<UserManagement />}
+                path="/"
+                element={<LandingPage />}
               />
 
               <Route
-                path="identity-documents"
-                element={<IdentityDocuments />}
+                path="/500"
+                element={<ServerError />}
               />
 
               <Route
-                path="signup-requests"
-                element={<SignupRequests />}
-              />
+                element={
+                  <ProtectedRoute roles={['admin']} />
+                }
+              >
+                <Route
+                  path="/admin"
+                  element={<PortalLayout />}
+                >
+                  <Route
+                    index
+                    element={<AdminDashboard />}
+                  />
+
+                  <Route
+                    path="create-id"
+                    element={<CreateId />}
+                  />
+
+                  <Route
+                    path="users"
+                    element={<UserManagement />}
+                  />
+
+                  <Route
+                    path="identity-documents"
+                    element={<IdentityDocuments />}
+                  />
+
+                  <Route
+                    path="signup-requests"
+                    element={<SignupRequests />}
+                  />
+
+                  <Route
+                    path="qr-generator"
+                    element={<QRCodeGenerator />}
+                  />
+
+                  <Route
+                    path="qr-scanner"
+                    element={<AdminQrScanner />}
+                  />
+
+                  <Route
+                    path="qr-brand-details"
+                    element={<QrBrandDetails />}
+                  />
+
+                  <Route
+                    path="barcode-scanner"
+                    element={<AdminBarcodeScanner />}
+                  />
+
+                  <Route
+                    path="recovery-sheets"
+                    element={<RecoverySheet />}
+                  />
+
+                  <Route
+                    path="profile"
+                    element={<Profile />}
+                  />
+
+                  <Route
+                    path="help"
+                    element={<HelpCenter />}
+                  />
+                </Route>
+              </Route>
 
               <Route
-                path="qr-generator"
-                element={<QRCodeGenerator />}
-              />
+                element={
+                  <ProtectedRoute roles={['subadmin']} />
+                }
+              >
+                <Route
+                  path="/sub-admin"
+                  element={<PortalLayout />}
+                >
+                  <Route
+                    index
+                    element={<SubAdminDashboard />}
+                  />
+
+                  <Route
+                    path="create-id"
+                    element={<CreateId />}
+                  />
+
+                  <Route
+                    path="signup-requests"
+                    element={<SignupRequests />}
+                  />
+
+                  <Route
+                    path="users"
+                    element={<UserManagement />}
+                  />
+
+                  <Route
+                    path="qr-generator"
+                    element={<QRCodeGenerator />}
+                  />
+
+                  <Route
+                    path="qr-scanner"
+                    element={<AdminQrScanner />}
+                  />
+
+                  <Route
+                    path="barcode-scanner"
+                    element={<AdminBarcodeScanner />}
+                  />
+
+                  <Route
+                    path="recovery-sheets"
+                    element={<RecoverySheet />}
+                  />
+
+                  <Route
+                    path="profile"
+                    element={<Profile />}
+                  />
+
+                  <Route
+                    path="help"
+                    element={<HelpCenter />}
+                  />
+                </Route>
+              </Route>
 
               <Route
-                path="qr-scanner"
-                element={<AdminQrScanner />}
-              />
+                element={
+                  <ProtectedRoute roles={['vendor']} />
+                }
+              >
+                <Route
+                  path="/vendor"
+                  element={<PortalLayout />}
+                >
+                  <Route
+                    index
+                    element={<VendorDashboard />}
+                  />
+
+                  <Route
+                    path="create-id"
+                    element={<CreateId />}
+                  />
+
+                  <Route
+                    path="signup-requests"
+                    element={<SignupRequests />}
+                  />
+
+                  <Route
+                    path="users"
+                    element={<UserManagement />}
+                  />
+
+                  <Route
+                    path="barcode-scanner"
+                    element={<AdminBarcodeScanner />}
+                  />
+
+                  <Route
+                    path="recovery-sheets"
+                    element={<RecoverySheet />}
+                  />
+
+                  <Route
+                    path="profile"
+                    element={<Profile />}
+                  />
+
+                  <Route
+                    path="help"
+                    element={<HelpCenter />}
+                  />
+                </Route>
+              </Route>
 
               <Route
-                path="qr-brand-details"
-                element={<QrBrandDetails />}
-              />
+                element={
+                  <ProtectedRoute roles={['supervisor']} />
+                }
+              >
+                <Route
+                  path="/supervisor"
+                  element={<PortalLayout />}
+                >
+                  <Route
+                    index
+                    element={<SupervisorDashboard />}
+                  />
+
+                  <Route
+                    path="barcode-scanner"
+                    element={<AdminBarcodeScanner />}
+                  />
+
+                  <Route
+                    path="profile"
+                    element={<Profile />}
+                  />
+
+                  <Route
+                    path="help"
+                    element={<HelpCenter />}
+                  />
+                </Route>
+              </Route>
 
               <Route
-                path="barcode-scanner"
-                element={<AdminBarcodeScanner />}
+                path="*"
+                element={<NotFound />}
               />
-
-              <Route
-                path="recovery-sheets"
-                element={<RecoverySheet />}
-              />
-
-              <Route
-                path="profile"
-                element={<Profile />}
-              />
-            </Route>
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute roles={['subadmin']} />
-            }
-          >
-            <Route
-              path="/sub-admin"
-              element={<PortalLayout />}
-            >
-              <Route
-                index
-                element={<SubAdminDashboard />}
-              />
-
-              <Route
-                path="create-id"
-                element={<CreateId />}
-              />
-
-              <Route
-                path="signup-requests"
-                element={<SignupRequests />}
-              />
-
-              <Route
-                path="users"
-                element={<UserManagement />}
-              />
-
-              <Route
-                path="qr-generator"
-                element={<QRCodeGenerator />}
-              />
-
-              <Route
-                path="qr-scanner"
-                element={<AdminQrScanner />}
-              />
-
-              <Route
-                path="barcode-scanner"
-                element={<AdminBarcodeScanner />}
-              />
-
-              <Route
-                path="recovery-sheets"
-                element={<RecoverySheet />}
-              />
-
-              <Route
-                path="profile"
-                element={<Profile />}
-              />
-            </Route>
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute roles={['vendor']} />
-            }
-          >
-            <Route
-              path="/vendor"
-              element={<PortalLayout />}
-            >
-              <Route
-                index
-                element={<VendorDashboard />}
-              />
-
-              <Route
-                path="create-id"
-                element={<CreateId />}
-              />
-
-              <Route
-                path="signup-requests"
-                element={<SignupRequests />}
-              />
-
-              <Route
-                path="users"
-                element={<UserManagement />}
-              />
-
-              <Route
-                path="barcode-scanner"
-                element={<AdminBarcodeScanner />}
-              />
-
-              <Route
-                path="recovery-sheets"
-                element={<RecoverySheet />}
-              />
-
-              <Route
-                path="profile"
-                element={<Profile />}
-              />
-            </Route>
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute roles={['supervisor']} />
-            }
-          >
-            <Route
-              path="/supervisor"
-              element={<PortalLayout />}
-            >
-              <Route
-                index
-                element={<SupervisorDashboard />}
-              />
-
-              <Route
-                path="barcode-scanner"
-                element={<AdminBarcodeScanner />}
-              />
-
-              <Route
-                path="profile"
-                element={<Profile />}
-              />
-            </Route>
-          </Route>
-
-          <Route
-            path="*"
-            element={<NotFound />}
-          />
-        </Routes>
+            </Routes>
+          </AppErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

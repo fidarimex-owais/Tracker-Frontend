@@ -32,6 +32,7 @@ const links = {
     { to: '/admin/qr-scanner', label: 'QR Scanner' },
     { to: '/admin/barcode-scanner', label: 'Barcode Scanner' },
     { to: '/admin/recovery-sheets', label: 'Recovery Sheet' },
+    { to: '/admin/help', label: 'Help Center' },
   ],
   subadmin: [
     { to: '/sub-admin', label: 'Dashboard', end: true },
@@ -47,6 +48,7 @@ const links = {
     { to: '/sub-admin/qr-scanner', label: 'QR Scanner' },
     { to: '/sub-admin/barcode-scanner', label: 'Barcode Scanner' },
     { to: '/sub-admin/recovery-sheets', label: 'Recovery Sheet' },
+    { to: '/sub-admin/help', label: 'Help Center' },
   ],
   vendor: [
     { to: '/vendor', label: 'Dashboard', end: true },
@@ -60,11 +62,13 @@ const links = {
     { to: '/vendor/users', label: 'User' },
     { to: '/vendor/barcode-scanner', label: 'Barcode Scanner' },
     { to: '/vendor/recovery-sheets', label: 'Recovery Sheet' },
+    { to: '/vendor/help', label: 'Help Center' },
   ],
   supervisor: [
     { to: '/supervisor', label: 'Dashboard', end: true },
     { to: '/supervisor/profile', label: 'Profile' },
     { to: '/supervisor/barcode-scanner', label: 'Barcode Scanner' },
+    { to: '/supervisor/help', label: 'Help Center' },
   ],
 };
 
@@ -158,8 +162,13 @@ export default function PortalLayout() {
     });
   };
 
+  const orderedLinks = [
+    ...(links[user.role] || []).filter((link) => link.label !== 'Help Center'),
+    ...(links[user.role] || []).filter((link) => link.label === 'Help Center'),
+  ];
+
   const renderNavLinks = (onNavigate) =>
-    (links[user.role] || []).map((link) => (
+    orderedLinks.map((link) => (
       <NavLink
         key={link.to}
         to={link.to}
@@ -260,7 +269,7 @@ export default function PortalLayout() {
       </header>
 
       <div className="mx-auto grid w-full max-w-7xl gap-3 px-2.5 py-3 min-[360px]:px-3 sm:gap-4 sm:px-5 sm:py-6 md:grid-cols-[190px_minmax(0,1fr)] md:gap-5 lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-6">
-        <aside className="hidden h-fit rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:block">
+        <aside className="hidden max-h-[calc(100vh-7.5rem)] self-start overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:sticky md:top-24 md:block">
           <nav className="flex flex-col gap-2">
             {renderNavLinks()}
           </nav>

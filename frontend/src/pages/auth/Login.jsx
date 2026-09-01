@@ -28,7 +28,9 @@ const ROLE_OPTIONS = [
   { value: 'supervisor', label: 'Supervisor' },
 ];
 
-const SIGNUP_ROLES = new Set([
+const PUBLIC_SIGNUP_ROLES = new Set(['supervisor']);
+
+const GOOGLE_LOGIN_ROLES = new Set([
   'vendor',
   'supervisor',
 ]);
@@ -100,8 +102,8 @@ export default function Login() {
     );
   }
 
-  const signupAvailable = SIGNUP_ROLES.has(selectedRole);
-  const googleLoginAvailable = SIGNUP_ROLES.has(selectedRole);
+  const signupAvailable = PUBLIC_SIGNUP_ROLES.has(selectedRole);
+  const googleLoginAvailable = GOOGLE_LOGIN_ROLES.has(selectedRole);
 
   const handleRoleChange = (event) => {
     const role = event.target.value;
@@ -484,7 +486,7 @@ export function AuthShell({
               />
             </Link>
 
-            <div className={`w-full min-h-0 ${wide ? 'max-w-2xl' : 'max-w-[400px]'}`}>
+            <div className={`w-full shrink-0 ${wide ? 'max-w-2xl' : 'max-w-[400px]'}`}>
               <h1 className="text-3xl font-extrabold leading-none tracking-tight text-slate-900 sm:text-4xl lg:text-[clamp(1.8rem,4.2vh,3rem)]">
                 {title}
               </h1>
@@ -500,7 +502,7 @@ export function AuthShell({
               </div>
             </div>
 
-            <p className="mt-6 shrink-0 pt-2 text-[10px] leading-4 text-slate-400 sm:text-[11px] lg:mt-auto">
+            <p className="mt-6 shrink-0 border-t border-slate-100 pt-3 text-[10px] leading-4 text-slate-400 sm:text-[11px]">
               © 2026 FIDAR IMEX PRIVATE LIMITED. All rights reserved.
             </p>
           </div>

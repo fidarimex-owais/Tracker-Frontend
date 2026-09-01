@@ -1,14 +1,10 @@
-// frontend/src/pages/NotFound.jsx
-
-import { Link, useNavigate } from 'react-router-dom';
+// frontend/src/pages/ServerError.jsx
 
 import { roleHome } from '../auth/roleHome';
 import { useAuth } from '../auth/useAuth';
 
-export default function NotFound() {
+export default function ServerError() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-
   const homePath = user ? roleHome(user.role) : '/';
   const homeLabel = user ? 'Go to Dashboard' : 'Go to Home';
 
@@ -18,38 +14,37 @@ export default function NotFound() {
         <div className="text-center">
           <div className="inline-flex items-center gap-3 rounded-full border border-orange-200 bg-orange-50 px-5 py-2.5">
             <span className="text-3xl font-black leading-none tracking-tight text-orange-600 sm:text-4xl">
-              404
+              500
             </span>
             <span className="border-l border-orange-200 pl-3 text-xs font-extrabold uppercase tracking-[0.14em] text-orange-600 sm:text-sm">
-              Page Not Found
+              Internal Server Error
             </span>
           </div>
 
           <h1 className="mx-auto mt-7 max-w-2xl text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
-            We couldn&apos;t find this page.
+            Something went wrong on our side.
           </h1>
 
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
-            The page may have been moved, deleted, or the address may be incorrect.
-            Use one of the options below to continue.
+            We couldn&apos;t complete your request right now. Try again, or return to your dashboard and continue from there.
           </p>
         </div>
 
         <div className="mx-auto mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => window.location.reload()}
             className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-sm font-extrabold text-slate-800 transition hover:border-orange-400 hover:text-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
           >
-            Go Back
+            Try Again
           </button>
 
-          <Link
-            to={homePath}
+          <a
+            href={homePath}
             className="inline-flex min-h-12 items-center justify-center rounded-xl bg-orange-500 px-5 text-sm font-extrabold text-white shadow-lg shadow-orange-100 transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200"
           >
             {homeLabel}
-          </Link>
+          </a>
         </div>
       </section>
     </main>

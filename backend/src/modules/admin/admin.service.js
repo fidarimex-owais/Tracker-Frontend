@@ -32,9 +32,12 @@ const {
 
 const {
   createIdentityRecord,
+  prepareIdentityUpdate,
   revealIdentityForAdmin,
   buildPrivateDocumentUrl,
   cleanupDocuments,
+  cleanupIdentityRecord,
+  rollbackIdentityRegistryUpdate,
 } = require('../identity/identity.service');
 
 const {
@@ -45,6 +48,11 @@ const {
 const {
   getRecoverySheetModel,
 } = require('../recovery/recovery.model');
+
+const {
+  MAX_DOCUMENTS,
+} = require('../identity/identity.validation');
+
 
 // Account creation and role-permission configuration
 
@@ -80,6 +88,7 @@ const sanitizePortalUser = (user) => ({
   id: user._id.toString(),
   userName: user.userName || '',
   brandName: '',
+  companyName: user.companyName || '',
   vendorId: user.vendorId ? user.vendorId.toString() : '',
   vendorName: user.vendorName || '',
   mobileNumber: user.mobileNumber || '',
@@ -93,6 +102,7 @@ const sanitizePortalUser = (user) => ({
 const sanitizeSignupRequest = (request) => ({
   id: request._id.toString(),
   brandName: '',
+  companyName: request.companyName || '',
   vendorId: getRequestVendorId(request),
   vendorName: request.vendorName || '',
   userName: request.userName,
@@ -142,6 +152,7 @@ const listVendorOptions = async () => {
   return vendors.map((vendor) => ({
     id: vendor._id.toString(),
     userName: vendor.userName || 'Unnamed Vendor',
+    companyName: vendor.companyName || '',
     email: vendor.email,
   }));
 };
@@ -151,6 +162,7 @@ const listVendorOptions = async () => {
 const createUser = async (
   {
     vendorId,
+    companyName,
     userName,
     mobileNumber,
     email,
@@ -211,7 +223,7 @@ const createUser = async (
   try {
     user = await User.create({
       brandName: '',
-      companyName: '',
+      companyName: role === 'vendor' ? companyName : '',
       vendorId: assignedVendor?._id || null,
       vendorName: assignedVendor?.userName || '',
       userName,
@@ -224,7 +236,7 @@ const createUser = async (
       createdByAdmin: actor.role === 'admin',
     });
   } catch (error) {
-    await cleanupDocuments(identity.documents);
+    await cleanupIdentityRecord(identity);
     if (error?.code === 11000) {
       throw createHttpError(
         409,
@@ -308,6 +320,15 @@ const approveSignupRequest = async (
     );
   }
 
+  if (!claimedRequest.identity) {
+    await restorePendingRequest(claimedRequest._id);
+
+    throw createHttpError(
+      409,
+      'Identity data for this signup request was deleted. Reject the request and ask the user to register again.'
+    );
+  }
+
   let assignedVendor = null;
 
   if (claimedRequest.role === 'supervisor') {
@@ -361,7 +382,10 @@ const approveSignupRequest = async (
   try {
     user = await User.create({
       brandName: '',
-      companyName: '',
+      companyName:
+        claimedRequest.role === 'vendor'
+          ? claimedRequest.companyName || ''
+          : '',
       vendorId: assignedVendor?._id || null,
       vendorName: assignedVendor?.userName || '',
       userName: claimedRequest.userName,
@@ -394,7 +418,10 @@ const approveSignupRequest = async (
         vendorId: assignedVendor?._id || null,
         vendorName: assignedVendor?.userName || '',
         brandName: '',
-        companyName: '',
+        companyName:
+          claimedRequest.role === 'vendor'
+            ? claimedRequest.companyName || ''
+            : '',
         reviewedBy: actor.id,
         reviewedByRole: actor.role,
         reviewedByBrand: '',
@@ -488,9 +515,7 @@ const rejectSignupRequest = async (
     );
   }
 
-  await cleanupDocuments(
-    rejectedRequest.identity?.documents || []
-  );
+  await cleanupIdentityRecord(rejectedRequest.identity);
 
   await SignupRequest.updateOne(
     { _id: rejectedRequest._id },
@@ -583,7 +608,10 @@ const updateRole = async (
 
   target.role = role;
   target.brandName = '';
-  target.companyName = '';
+
+  if (role !== 'vendor') {
+    target.companyName = '';
+  }
 
   if (role !== 'supervisor') {
     target.vendorId = null;
@@ -729,10 +757,10 @@ const deleteUser = async (
   }
 
   const deletedUser = sanitizeUser(target);
-  const documents = target.identity?.documents || [];
+  const identity = target.identity;
 
   await target.deleteOne();
-  await cleanupDocuments(documents);
+  await cleanupIdentityRecord(identity);
 
   return deletedUser;
 };
@@ -1280,6 +1308,7 @@ const serializeIdentitySubmission = (
     mobileNumber: record.mobileNumber || '',
     email: record.email,
     role: record.role,
+    companyName: record.companyName || '',
     vendorName: record.vendorName || '',
     createdAt: record.createdAt,
     ...identity,
@@ -1334,16 +1363,13 @@ const listIdentitySubmissions = async () => {
   );
 };
 
-const getIdentityDocumentAccess = async (
+const getIdentityRecordForAdmin = async (
   source,
   recordId,
-  documentId
+  { requireEditable = false } = {}
 ) => {
-  if (
-    !mongoose.isValidObjectId(recordId) ||
-    !mongoose.isValidObjectId(documentId)
-  ) {
-    throw createHttpError(400, 'Invalid document reference');
+  if (!mongoose.isValidObjectId(recordId)) {
+    throw createHttpError(400, 'Invalid identity record reference');
   }
 
   let record;
@@ -1363,6 +1389,191 @@ const getIdentityDocumentAccess = async (
   if (!record?.identity) {
     throw createHttpError(404, 'Identity record not found');
   }
+
+  if (
+    requireEditable &&
+    source === 'signup-request' &&
+    record.status !== 'pending'
+  ) {
+    throw createHttpError(
+      409,
+      'This signup request is currently being processed and cannot be edited'
+    );
+  }
+
+  return record;
+};
+
+const identityStatusForRecord = (record, source) =>
+  source === 'user'
+    ? record.isActive
+      ? 'active'
+      : 'inactive'
+    : record.status;
+
+const updateIdentitySubmission = async (
+  source,
+  recordId,
+  {
+    panNumber,
+    aadhaarNumber,
+    companyName,
+    documents = [],
+  }
+) => {
+  const record = await getIdentityRecordForAdmin(
+    source,
+    recordId,
+    { requireEditable: true }
+  );
+
+  const existingDocumentCount =
+    record.identity.documents?.length || 0;
+
+  if (
+    existingDocumentCount + documents.length >
+    MAX_DOCUMENTS
+  ) {
+    throw createHttpError(
+      400,
+      `A maximum of ${MAX_DOCUMENTS} documents can be stored for one user`
+    );
+  }
+
+  if (
+    record.role === 'vendor' &&
+    (companyName.length < 2 || companyName.length > 120)
+  ) {
+    throw createHttpError(
+      400,
+      'Enter the Vendor company name (2 to 120 characters)'
+    );
+  }
+
+  const prepared = await prepareIdentityUpdate({
+    panNumber,
+    aadhaarNumber,
+    documents,
+    folderKey: `admin-edit-${source}-${record.email}`,
+    currentRegistryId: record.identity.registryId || null,
+    excludeSource: source,
+    excludeRecordId: record._id.toString(),
+  });
+
+  try {
+    record.identity.registryId = prepared.registryId;
+    record.identity.panEncrypted = prepared.panEncrypted;
+    record.identity.aadhaarEncrypted =
+      prepared.aadhaarEncrypted;
+    record.identity.panVerification =
+      prepared.panVerification;
+    record.identity.aadhaarVerification =
+      prepared.aadhaarVerification;
+    record.identity.verifiedAt = prepared.verifiedAt;
+
+    prepared.uploadedDocuments.forEach((document) => {
+      record.identity.documents.push(document);
+    });
+
+    if (record.role === 'vendor') {
+      record.companyName = companyName;
+    }
+
+    await record.save();
+  } catch (error) {
+    await Promise.all([
+      cleanupDocuments(prepared.uploadedDocuments),
+      rollbackIdentityRegistryUpdate(prepared.registryRollback),
+    ]);
+    throw error;
+  }
+
+  return serializeIdentitySubmission(
+    record,
+    source,
+    identityStatusForRecord(record, source)
+  );
+};
+
+const deleteIdentityDocument = async (
+  source,
+  recordId,
+  documentId
+) => {
+  if (!mongoose.isValidObjectId(documentId)) {
+    throw createHttpError(400, 'Invalid document reference');
+  }
+
+  const record = await getIdentityRecordForAdmin(
+    source,
+    recordId,
+    { requireEditable: true }
+  );
+  const document = record.identity.documents.id(documentId);
+
+  if (!document) {
+    throw createHttpError(404, 'Document not found');
+  }
+
+  const storedDocument =
+    document.toObject?.() || { ...document };
+
+  record.identity.documents.pull(documentId);
+  await record.save();
+  await cleanupDocuments([storedDocument]);
+
+  return serializeIdentitySubmission(
+    record,
+    source,
+    identityStatusForRecord(record, source)
+  );
+};
+
+const deleteIdentitySubmission = async (
+  source,
+  recordId
+) => {
+  const record = await getIdentityRecordForAdmin(
+    source,
+    recordId,
+    { requireEditable: true }
+  );
+
+  const identity =
+    record.identity?.toObject?.() || record.identity;
+
+  if (source === 'signup-request') {
+    await record.deleteOne();
+  } else {
+    record.set('identity', undefined);
+    await record.save();
+  }
+
+  await cleanupIdentityRecord(identity);
+
+  return {
+    id: record._id.toString(),
+    source,
+    signupRequestDeleted: source === 'signup-request',
+  };
+};
+
+const getIdentityDocumentAccess = async (
+  source,
+  recordId,
+  documentId
+) => {
+  if (
+    !mongoose.isValidObjectId(recordId) ||
+    !mongoose.isValidObjectId(documentId)
+  ) {
+    throw createHttpError(400, 'Invalid document reference');
+  }
+
+  const record = await getIdentityRecordForAdmin(
+    source,
+    recordId
+  );
 
   const document = record.identity.documents.id(documentId);
 
@@ -1415,5 +1626,8 @@ module.exports = {
   updateStatus,
   deleteUser,
   listIdentitySubmissions,
+  updateIdentitySubmission,
+  deleteIdentitySubmission,
+  deleteIdentityDocument,
   getIdentityDocumentAccess,
 };

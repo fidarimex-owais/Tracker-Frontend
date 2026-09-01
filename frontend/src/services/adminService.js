@@ -186,3 +186,37 @@ export const getIdentityDocumentAccess = async (
       `/api/admin/identity-documents/${source}/${recordId}/documents/${documentId}/open`
     )
   ).data;
+
+export const updateIdentityDocumentRecord = async (
+  source,
+  recordId,
+  payload
+) =>
+  (
+    await api.patch(
+      `/api/admin/identity-documents/${source}/${recordId}`,
+      payload
+    )
+  ).data;
+
+export const deleteIdentityDocumentRecord = async (
+  source,
+  recordId
+) =>
+  (
+    await api.delete(
+      `/api/admin/identity-documents/${source}/${recordId}`
+    )
+  ).data;
+
+export const deleteIdentityDocumentFile = async (
+  source,
+  recordId,
+  documentId
+) =>
+  (
+    await api.delete(
+      `/api/admin/identity-documents/${source}/${recordId}/documents/${documentId}`
+    )
+  ).data;
+

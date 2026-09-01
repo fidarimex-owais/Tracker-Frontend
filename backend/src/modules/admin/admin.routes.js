@@ -7,6 +7,7 @@ const authorize = require('../../middleware/role.middleware');
 const controller = require('./admin.controller');
 const {
   validateCreateId,
+  validateIdentityUpdate,
 } = require('./admin.validation');
 
 // Create the Admin router
@@ -50,6 +51,23 @@ router.get(
   '/identity-documents/:source/:id/documents/:documentId/open',
   asyncHandler(controller.openIdentityDocument)
 );
+
+router.patch(
+  '/identity-documents/:source/:id',
+  validateIdentityUpdate,
+  asyncHandler(controller.updateIdentityDocumentRecord)
+);
+
+router.delete(
+  '/identity-documents/:source/:id/documents/:documentId',
+  asyncHandler(controller.deleteIdentityDocumentFile)
+);
+
+router.delete(
+  '/identity-documents/:source/:id',
+  asyncHandler(controller.deleteIdentityDocumentRecord)
+);
+
 
 // Signup request review routes
 

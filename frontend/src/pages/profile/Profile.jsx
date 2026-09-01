@@ -519,21 +519,13 @@ export default function Profile() {
             />
           </ProfileField>
 
-          <ProfileField
-            label={
-              user.role === 'supervisor'
-                ? 'Assigned Vendor'
-                : 'Vendor Assignment'
-            }
-          >
-            <ReadOnlyValue
-              value={
-                user.role === 'supervisor'
-                  ? user.vendorName || 'Unassigned'
-                  : 'Not applicable'
-              }
-            />
-          </ProfileField>
+          {user.role === 'supervisor' && (
+            <ProfileField label="Assigned Vendor">
+              <ReadOnlyValue
+                value={user.vendorName || 'Unassigned'}
+              />
+            </ProfileField>
+          )}
         </div>
 
         {editing && (

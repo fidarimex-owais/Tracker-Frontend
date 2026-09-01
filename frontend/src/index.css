@@ -28,6 +28,37 @@ input[type='number'] {
   appearance: textfield;
 }
 
+/* Identity/document upload controls: keep the native file button neutral so it
+   matches the surrounding form in both light and dark appearance. */
+.identity-file-input::file-selector-button {
+  margin-right: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #e2e8f0;
+  color: #334155;
+  padding: 0.4rem 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.identity-file-input::file-selector-button:hover {
+  background: #cbd5e1;
+  border-color: #94a3b8;
+}
+
+html.dark .identity-file-input::file-selector-button {
+  background: #34353a;
+  border-color: #4a4b50;
+  color: #e5e5e3;
+}
+
+html.dark .identity-file-input::file-selector-button:hover {
+  background: #404146;
+  border-color: #5b5c62;
+}
+
 /* Mobile viewport safety */
 html,
 body,

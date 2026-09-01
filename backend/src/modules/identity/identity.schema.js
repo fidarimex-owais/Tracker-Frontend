@@ -46,6 +46,13 @@ const identityDocumentSchema = new mongoose.Schema(
 
 const identitySchema = new mongoose.Schema(
   {
+    // Points to the global uniqueness reservation for this PAN/Aadhaar pair.
+    // Older records may not have this field; the service still checks them
+    // directly so they cannot be duplicated.
+    registryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     panEncrypted: {
       type: String,
       required: true,

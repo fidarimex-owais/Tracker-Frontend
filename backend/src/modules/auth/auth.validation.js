@@ -12,11 +12,7 @@ const LOGIN_ROLE_OPTIONS = [
   'supervisor',
 ];
 
-const PUBLIC_SIGNUP_ROLE_OPTIONS = [
-  'subadmin',
-  'vendor',
-  'supervisor',
-];
+const PUBLIC_SIGNUP_ROLE_OPTIONS = ['supervisor'];
 
 const GOOGLE_LOGIN_ROLE_OPTIONS = [
   'vendor',
@@ -179,22 +175,32 @@ const validateSignupRequest = (req, res, next) => {
       : '';
 
   const termsAccepted = req.body?.termsAccepted === true;
-  const identity = validateIdentityPayload(req.body);
-  const errors = [...identity.errors];
 
+  // Public self-registration is intentionally restricted to Supervisors.
+  // Vendor and Sub-Admin IDs must be created through authorized portal flows.
   if (!PUBLIC_SIGNUP_ROLE_OPTIONS.includes(role)) {
-    errors.push({
-      field: 'role',
-      message: 'Public signup is available for Sub-Admin, Vendor, or Supervisor',
+    return res.status(403).json({
+      success: false,
+      message: 'Public registration is available only for Supervisor accounts.',
+      errors: [
+        {
+          field: 'role',
+          message: 'Only Supervisor accounts can self-register',
+        },
+      ],
     });
   }
 
-  if (role === 'supervisor' && !OBJECT_ID_RE.test(vendorId)) {
+  const identity = validateIdentityPayload(req.body);
+  const errors = [...identity.errors];
+
+  if (!OBJECT_ID_RE.test(vendorId)) {
     errors.push({
       field: 'vendorId',
       message: 'Select a Vendor',
     });
   }
+
 
   if (userName.length < 2) {
     errors.push({
@@ -249,7 +255,8 @@ const validateSignupRequest = (req, res, next) => {
 
   req.body = {
     role,
-    vendorId: role === 'supervisor' ? vendorId : '',
+    vendorId,
+    companyName: '',
     userName,
     mobileNumber,
     email,
