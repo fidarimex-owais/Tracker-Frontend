@@ -134,7 +134,17 @@ const resolveConflict = async ({ brandName, packageDate, lineNumber, action, pay
 
   const previousVendorName = line.vendorName;
 
+  line.vendorId = payload.vendorId;
   line.vendorName = payload.vendorName;
+  line.coldStorageId = payload.coldStorageId;
+  line.coldStorageName = payload.coldStorageName;
+  line.coldStorageAddress = payload.coldStorageAddress;
+  line.coldStorageLocation = payload.coldStorageLocation;
+  line.farmPlotAddress = payload.farmPlotAddress;
+  line.farmPlotLocation = payload.farmPlotLocation;
+  line.distanceMeters = payload.distanceMeters;
+  line.distanceKm = payload.distanceKm;
+  line.routeDurationSeconds = payload.routeDurationSeconds;
   line.farmerName = payload.farmerName;
   line.supervisor = payload.supervisor;
   line.weight = payload.weight;
@@ -218,7 +228,17 @@ const buildQrCodes = (quantities) =>
 
 const buildLine = (payload) => ({
   lineNumber: payload.lineNumber,
+  vendorId: payload.vendorId,
   vendorName: payload.vendorName,
+  coldStorageId: payload.coldStorageId,
+  coldStorageName: payload.coldStorageName,
+  coldStorageAddress: payload.coldStorageAddress,
+  coldStorageLocation: payload.coldStorageLocation,
+  farmPlotAddress: payload.farmPlotAddress,
+  farmPlotLocation: payload.farmPlotLocation,
+  distanceMeters: payload.distanceMeters,
+  distanceKm: payload.distanceKm,
+  routeDurationSeconds: payload.routeDurationSeconds,
   farmerName: payload.farmerName,
   supervisor: payload.supervisor,
   weight: payload.weight,
@@ -233,7 +253,17 @@ const formatLine = (context, line) => ({
   brandName: context.brandName,
   packageDate: context.packageDate,
   lineNumber: line.lineNumber,
+  vendorId: line.vendorId?.toString?.() || '',
   vendorName: line.vendorName,
+  coldStorageId: line.coldStorageId?.toString?.() || '',
+  coldStorageName: line.coldStorageName || '',
+  coldStorageAddress: line.coldStorageAddress || '',
+  coldStorageLocation: line.coldStorageLocation || null,
+  farmPlotAddress: line.farmPlotAddress || line.address || '',
+  farmPlotLocation: line.farmPlotLocation || line.geolocation || null,
+  distanceMeters: line.distanceMeters ?? null,
+  distanceKm: line.distanceKm ?? null,
+  routeDurationSeconds: line.routeDurationSeconds ?? null,
   farmerName: line.farmerName,
   supervisor: line.supervisor,
   weight: line.weight,

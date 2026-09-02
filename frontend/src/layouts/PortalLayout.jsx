@@ -27,6 +27,7 @@ const links = {
       label: 'Signup Request',
       showPendingCount: true,
     },
+    { to: '/admin/cold-storage', label: 'Cold Storage' },
     { to: '/admin/qr-generator', label: 'Generate QR' },
     { to: '/admin/qr-brand-details', label: 'QR Brand Details' },
     { to: '/admin/qr-scanner', label: 'QR Scanner' },

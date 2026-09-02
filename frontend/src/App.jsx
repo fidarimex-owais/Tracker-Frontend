@@ -24,6 +24,7 @@ import AdminQrScanner from './pages/admin/AdminQrScanner';
 import AdminBarcodeScanner from './pages/admin/AdminBarcodeScanner';
 import QrBrandDetails from './pages/admin/QrBrandDetails';
 import IdentityDocuments from './pages/admin/IdentityDocuments';
+import ColdStorage from './pages/admin/ColdStorage';
 
 import SubAdminDashboard from './pages/subadmin/SubAdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
@@ -94,6 +95,11 @@ export default function App() {
                   <Route
                     path="signup-requests"
                     element={<SignupRequests />}
+                  />
+
+                  <Route
+                    path="cold-storage"
+                    element={<ColdStorage />}
                   />
 
                   <Route

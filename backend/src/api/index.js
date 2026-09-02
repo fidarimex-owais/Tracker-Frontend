@@ -11,6 +11,8 @@ const scanningRoutes = require('../modules/scanning/scanning.routes');
 const rawRecoveryRoutes = require('../modules/rawRecovery/rawRecovery.routes');
 const recoveryRoutes = require('../modules/recovery/recovery.routes');
 const qrBrandDetailsRoutes = require('../modules/qrBrandDetails/qrBrandDetails.routes');
+const coldStorageRoutes = require('../modules/coldStorage/coldStorage.routes');
+const geoRoutes = require('../modules/geo/geo.routes');
 
 // Create the main API router
 
@@ -28,6 +30,8 @@ router.use('/scanning', scanningRoutes);
 router.use('/raw-recovery-sheets', rawRecoveryRoutes);
 router.use('/recovery-sheets', recoveryRoutes);
 router.use('/qr-brand-details', qrBrandDetailsRoutes);
+router.use('/cold-storages', coldStorageRoutes);
+router.use('/geo', geoRoutes);
 
 // Export the configured API router
 

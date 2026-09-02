@@ -1,0 +1,13 @@
+RESOLVED FRONTEND - 2026-09-01
+
+This folder was rebuilt from the uploaded frontend as the source of truth and
+merged with the Cold Storage + Geoapify QR enhancement.
+
+Key points:
+- Existing 404/500 pages, Help Center, identity/document UI, Supervisor-only
+  public registration, and current portal layout are preserved.
+- Admin has Cold Storage management.
+- Generate QR has active Vendor -> Cold Storage -> Farm Plot location flow.
+- Geoapify API key is NOT used in the browser/frontend.
+- No node_modules are included. Run npm install only if your local dependencies
+  are not already installed, then npm run dev -- --host or npm run build.

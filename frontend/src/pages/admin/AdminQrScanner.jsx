@@ -462,16 +462,27 @@ function LineCard({ line }) {
           <Info label="Supervisor" value={line.supervisor || '—'} />
           <Info label="Weight" value={`${line.weight ?? '—'} kg`} />
           <Info
-            label="Coordinates"
+            label="Farm Plot Coordinates"
             value={
-              line.geolocation
-                ? `${line.geolocation.latitude}, ${line.geolocation.longitude}`
+              line.farmPlotLocation || line.geolocation
+                ? `${(line.farmPlotLocation || line.geolocation).latitude}, ${(line.farmPlotLocation || line.geolocation).longitude}`
                 : '—'
             }
           />
           <Info label="Created" value={formatDateTime(line.createdDate || line.createdAt)} />
+          {line.coldStorageName && (
+            <Info label="Cold Storage" value={line.coldStorageName} />
+          )}
+          {line.distanceKm != null && (
+            <Info label="Distance" value={`${Number(line.distanceKm).toFixed(2)} km`} />
+          )}
+          {line.coldStorageAddress && (
+            <div className="min-w-0 min-[390px]:col-span-2">
+              <Info label="Cold Storage Address" value={line.coldStorageAddress} />
+            </div>
+          )}
           <div className="min-w-0 min-[390px]:col-span-2">
-            <Info label="Address" value={line.address || '—'} />
+            <Info label="Farm Plot Address" value={line.farmPlotAddress || line.address || '—'} />
           </div>
         </dl>
 

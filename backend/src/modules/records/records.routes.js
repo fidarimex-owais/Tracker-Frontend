@@ -8,6 +8,7 @@ const recordsController = require('./records.controller');
 const {
   validateSubmitLine,
   validateResolveConflict,
+  validateQrAssociations,
   enforceSubadminPackageDate,
 } = require('./records.validation');
 
@@ -21,6 +22,7 @@ router.post(
   '/',
   enforceSubadminPackageDate,
   validateSubmitLine,
+  asyncHandler(validateQrAssociations),
   asyncHandler(recordsController.createRecord)
 );
 
@@ -30,6 +32,7 @@ router.post(
   '/resolve',
   enforceSubadminPackageDate,
   validateResolveConflict,
+  asyncHandler(validateQrAssociations),
   asyncHandler(recordsController.resolveConflict)
 );
 

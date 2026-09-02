@@ -1,7 +1,13 @@
-// Supported brands, vendors and hand categories
+const mongoose = require('mongoose');
+const { findActiveVendorById } = require('../auth/auth.model');
+const {
+  findActiveColdStorageById,
+} = require('../coldStorage/coldStorage.service');
+const {
+  calculateRouteDistance,
+} = require('../geo/geo.service');
 
 const ALLOWED_BRANDS = ['Hi Banana', 'Joker', 'Banana Man'];
-const ALLOWED_VENDORS = ['Yogesh Korhale', 'Sachin Markad', 'Tannaji Kashid'];
 const HAND_CATEGORIES = [4, 5, 6, 8];
 
 const isNonEmptyString = (value) =>
@@ -12,8 +18,6 @@ const isFiniteNumber = (value) =>
 
 const isValidISODate = (value) =>
   typeof value === 'string' && !Number.isNaN(Date.parse(value));
-
-// Business timezone used for Sub-admin date restrictions
 
 const BUSINESS_TIME_ZONE =
   process.env.BUSINESS_TIMEZONE || 'Asia/Kolkata';
@@ -42,32 +46,22 @@ const toDateOnlyString = (value) => {
   const rawValue = String(value || '').trim();
   const datePrefix = rawValue.match(/^(\d{4}-\d{2}-\d{2})/);
 
-  if (datePrefix) {
-    return datePrefix[1];
-  }
+  if (datePrefix) return datePrefix[1];
 
   const parsedDate = new Date(rawValue);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return '';
-  }
+  if (Number.isNaN(parsedDate.getTime())) return '';
 
   return formatDateInBusinessTimeZone(parsedDate);
 };
 
-// Prevent Sub-admin QR generation for past packaging dates
-
 const enforceSubadminPackageDate = (req, res, next) => {
-  if (req.user?.role !== 'subadmin') {
-    return next();
-  }
+  if (req.user?.role !== 'subadmin') return next();
 
   const packageDate =
     req.method === 'GET'
       ? req.query?.packageDate
       : req.body?.packageDate;
 
-  // Existing validators handle missing or malformed date values.
   if (!packageDate || !isValidISODate(String(packageDate))) {
     return next();
   }
@@ -92,8 +86,6 @@ const enforceSubadminPackageDate = (req, res, next) => {
 
   return next();
 };
-
-// Validate quantities for supported hand categories
 
 const validateQuantities = (quantities, errors) => {
   if (
@@ -124,7 +116,6 @@ const validateQuantities = (quantities, errors) => {
 
   for (const category of HAND_CATEGORIES) {
     const value = quantities[category] ?? quantities[String(category)];
-
     if (value === undefined) continue;
 
     if (!Number.isInteger(value) || value < 0) {
@@ -141,12 +132,45 @@ const validateQuantities = (quantities, errors) => {
   if (!anyPositive && unknownKeys.length === 0) {
     errors.push({
       field: 'quantities',
-      message: 'At least one hand category must have a quantity greater than 0',
+      message:
+        'At least one hand category must have a quantity greater than 0',
     });
   }
 };
 
-// Validate required QR record line fields
+const validateLocation = (value, field, errors) => {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    errors.push({
+      field,
+      message: `${field} is required and must be a location object`,
+    });
+    return;
+  }
+
+  const { latitude, longitude } = value;
+
+  if (!isFiniteNumber(latitude) || latitude < -90 || latitude > 90) {
+    errors.push({
+      field: `${field}.latitude`,
+      message: 'latitude must be a number between -90 and 90',
+    });
+  }
+
+  if (
+    !isFiniteNumber(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    errors.push({
+      field: `${field}.longitude`,
+      message: 'longitude must be a number between -180 and 180',
+    });
+  }
+};
 
 const validateLineFields = (body, errors) => {
   if (!isNonEmptyString(body.brandName)) {
@@ -161,21 +185,32 @@ const validateLineFields = (body, errors) => {
     });
   }
 
-  if (!isNonEmptyString(body.vendorName)) {
-    errors.push({ field: 'vendorName', message: 'vendorName is required and must be a string' });
-  } else if (!ALLOWED_VENDORS.includes(body.vendorName.trim())) {
+  if (!mongoose.isValidObjectId(String(body.vendorId || ''))) {
     errors.push({
-      field: 'vendorName',
-      message: `vendorName must be one of: ${ALLOWED_VENDORS.join(', ')}`,
+      field: 'vendorId',
+      message: 'Select an active Vendor',
+    });
+  }
+
+  if (!mongoose.isValidObjectId(String(body.coldStorageId || ''))) {
+    errors.push({
+      field: 'coldStorageId',
+      message: 'Select an active Cold Storage',
     });
   }
 
   if (!isNonEmptyString(body.farmerName)) {
-    errors.push({ field: 'farmerName', message: 'farmerName is required and must be a string' });
+    errors.push({
+      field: 'farmerName',
+      message: 'farmerName is required and must be a string',
+    });
   }
 
   if (!isNonEmptyString(body.supervisor)) {
-    errors.push({ field: 'supervisor', message: 'supervisor is required and must be a string' });
+    errors.push({
+      field: 'supervisor',
+      message: 'supervisor is required and must be a string',
+    });
   }
 
   if (!Number.isInteger(body.lineNumber) || body.lineNumber < 1) {
@@ -186,45 +221,29 @@ const validateLineFields = (body, errors) => {
   }
 
   if (!isFiniteNumber(body.weight) || body.weight <= 0) {
-    errors.push({ field: 'weight', message: 'weight is required and must be a positive number' });
+    errors.push({
+      field: 'weight',
+      message: 'weight is required and must be a positive number',
+    });
   }
 
-  if (!isNonEmptyString(body.address)) {
-    errors.push({ field: 'address', message: 'address is required and must be a string' });
+  if (!isNonEmptyString(body.farmPlotAddress)) {
+    errors.push({
+      field: 'farmPlotAddress',
+      message: 'Farm Plot Address/Location is required',
+    });
   }
+
+  validateLocation(body.farmPlotLocation, 'farmPlotLocation', errors);
 
   if (!isValidISODate(body.packageDate)) {
     errors.push({
       field: 'packageDate',
-      message: 'packageDate is required and must be a valid date (YYYY-MM-DD)',
+      message:
+        'packageDate is required and must be a valid date (YYYY-MM-DD)',
     });
-  }
-
-  if (typeof body.geolocation !== 'object' || body.geolocation === null) {
-    errors.push({
-      field: 'geolocation',
-      message: 'geolocation is required and must be an object',
-    });
-  } else {
-    const { latitude, longitude } = body.geolocation;
-
-    if (!isFiniteNumber(latitude) || latitude < -90 || latitude > 90) {
-      errors.push({
-        field: 'geolocation.latitude',
-        message: 'latitude must be a number between -90 and 90',
-      });
-    }
-
-    if (!isFiniteNumber(longitude) || longitude < -180 || longitude > 180) {
-      errors.push({
-        field: 'geolocation.longitude',
-        message: 'longitude must be a number between -180 and 180',
-      });
-    }
   }
 };
-
-// Normalize missing hand quantities to zero
 
 const normalizeQuantities = (quantities) => {
   const normalized = {};
@@ -237,7 +256,23 @@ const normalizeQuantities = (quantities) => {
   return normalized;
 };
 
-// Validate and normalize new QR record submissions
+const normalizeLinePayload = (body, { includeContext = true } = {}) => ({
+  ...(includeContext ? { brandName: body.brandName } : {}),
+  vendorId: String(body.vendorId || '').trim(),
+  coldStorageId: String(body.coldStorageId || '').trim(),
+  farmerName: body.farmerName.trim(),
+  supervisor: body.supervisor.trim(),
+  ...(includeContext ? { lineNumber: body.lineNumber } : {}),
+  weight: body.weight,
+  farmPlotAddress: body.farmPlotAddress.trim(),
+  farmPlotLocation: {
+    latitude: body.farmPlotLocation.latitude,
+    longitude: body.farmPlotLocation.longitude,
+    placeId: String(body.farmPlotLocation.placeId || '').trim(),
+  },
+  ...(includeContext ? { packageDate: new Date(body.packageDate) } : {}),
+  quantities: normalizeQuantities(body.quantities),
+});
 
 const validateSubmitLine = (req, res, next) => {
   const body = req.body || {};
@@ -254,32 +289,18 @@ const validateSubmitLine = (req, res, next) => {
     });
   }
 
-  req.body = {
-    brandName: body.brandName,
-    vendorName: body.vendorName.trim(),
-    farmerName: body.farmerName.trim(),
-    supervisor: body.supervisor.trim(),
-    lineNumber: body.lineNumber,
-    weight: body.weight,
-    address: body.address.trim(),
-    packageDate: new Date(body.packageDate),
-    geolocation: {
-      latitude: body.geolocation.latitude,
-      longitude: body.geolocation.longitude,
-    },
-    quantities: normalizeQuantities(body.quantities),
-  };
-
+  req.body = normalizeLinePayload(body);
   return next();
 };
-
-// Validate duplicate-line conflict resolution requests
 
 const validateResolveConflict = (req, res, next) => {
   const body = req.body || {};
   const errors = [];
 
-  if (!isNonEmptyString(body.brandName) || !ALLOWED_BRANDS.includes(body.brandName)) {
+  if (
+    !isNonEmptyString(body.brandName) ||
+    !ALLOWED_BRANDS.includes(body.brandName)
+  ) {
     errors.push({
       field: 'brandName',
       message: `brandName must be one of: ${ALLOWED_BRANDS.join(', ')}`,
@@ -342,28 +363,88 @@ const validateResolveConflict = (req, res, next) => {
     action: body.action,
     payload:
       body.action === 'update'
-        ? {
-            vendorName: body.payload.vendorName.trim(),
-            farmerName: body.payload.farmerName.trim(),
-            supervisor: body.payload.supervisor.trim(),
-            weight: body.payload.weight,
-            address: body.payload.address.trim(),
-            geolocation: {
-              latitude: body.payload.geolocation.latitude,
-              longitude: body.payload.geolocation.longitude,
-            },
-            quantities: normalizeQuantities(body.payload.quantities),
-          }
+        ? normalizeLinePayload(body.payload, { includeContext: false })
         : null,
   };
 
   return next();
 };
 
-// Export QR record validation middleware
+const enrichLocationContext = async (payload) => {
+  const [vendor, coldStorage] = await Promise.all([
+    findActiveVendorById(payload.vendorId),
+    findActiveColdStorageById(payload.coldStorageId),
+  ]);
+
+  if (!vendor) {
+    throw createHttpError(400, 'Selected Vendor is no longer active');
+  }
+
+  if (!coldStorage) {
+    throw createHttpError(400, 'Selected Cold Storage is no longer active');
+  }
+
+  if (coldStorage.vendorId.toString() !== vendor._id.toString()) {
+    throw createHttpError(
+      400,
+      'Selected Cold Storage is not associated with the selected Vendor'
+    );
+  }
+
+  const route = await calculateRouteDistance({
+    from: coldStorage.location,
+    to: payload.farmPlotLocation,
+  });
+
+  return {
+    ...payload,
+    vendorName: vendor.userName || vendor.email,
+    coldStorageName: coldStorage.name,
+    coldStorageAddress: coldStorage.address,
+    coldStorageLocation: {
+      latitude: coldStorage.location.latitude,
+      longitude: coldStorage.location.longitude,
+      placeId: coldStorage.location.placeId || '',
+    },
+    distanceMeters: route.distanceMeters,
+    distanceKm: route.distanceKm,
+    routeDurationSeconds: route.durationSeconds,
+    // Keep the existing fields populated for scanner/recovery compatibility.
+    address: payload.farmPlotAddress,
+    geolocation: {
+      latitude: payload.farmPlotLocation.latitude,
+      longitude: payload.farmPlotLocation.longitude,
+    },
+  };
+};
+
+const validateQrAssociations = async (req, res, next) => {
+  try {
+    if (req.body?.action === 'reuse') {
+      return next();
+    }
+
+    if (req.body?.action === 'update') {
+      req.body.payload = await enrichLocationContext(req.body.payload);
+      return next();
+    }
+
+    req.body = await enrichLocationContext(req.body);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const createHttpError = (statusCode, message) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
 
 module.exports = {
   validateSubmitLine,
   validateResolveConflict,
+  validateQrAssociations,
   enforceSubadminPackageDate,
 };

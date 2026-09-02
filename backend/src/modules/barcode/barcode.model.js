@@ -71,6 +71,54 @@ const barcodeLineSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    vendorId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    coldStorageId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    coldStorageName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    coldStorageAddress: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    coldStorageLocation: {
+      type: geolocationSchema,
+      default: undefined,
+    },
+    farmPlotAddress: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    farmPlotLocation: {
+      type: geolocationSchema,
+      default: undefined,
+    },
+    distanceMeters: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    distanceKm: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    routeDurationSeconds: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
     farmerName: {
       type: String,
       required: true,

@@ -82,7 +82,8 @@ api.interceptors.response.use(
       status >= 500 &&
       status <= 599 &&
       typeof window !== 'undefined' &&
-      window.location.pathname !== '/500'
+      window.location.pathname !== '/500' &&
+      !error.config?.skipServerErrorRedirect
     ) {
       window.location.assign('/500');
     }

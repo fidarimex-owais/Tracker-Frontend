@@ -1,0 +1,18 @@
+RESOLVED BACKEND - 2026-09-01
+
+This folder was rebuilt from the uploaded backend as the source of truth and
+merged with the Cold Storage + Geoapify QR enhancement.
+
+Cleanup performed:
+- Removed obsolete root app.js/server.js. npm scripts already use src/server.js.
+- Removed the obsolete underscore Records implementation:
+  records_controller.js, records_model.js, records_routes.js,
+  records_services.js, records_validation.js, and records/sticker_generator.js.
+- The active Records implementation is the dotted set:
+  records.controller.js, records.model.js, records.routes.js,
+  records.service.js, records.validation.js.
+
+Configuration:
+- Add GEOAPIFY_API_KEY to your existing backend/.env.
+- Keep all existing secrets/keys in your local .env; no real backend .env is
+  included in this ZIP.
